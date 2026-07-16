@@ -16,8 +16,12 @@ mallm/
 │   └── docker-build.mallm.yaml #   Simpler build tool example
 ├── dist/                       # Compiled JS output (gitignored)
 ├── docs/                       # Documentation
-│   └── PROJ-LAYOUT.md          #   This file
-├── .gitignore                  # Ignores node_modules, dist
+│   ├── PROJ-ARCH.md            #   Architecture overview
+│   ├── PROJ-ARCH.summary.md    #   Architecture quick reference
+│   ├── PROJ-LAYOUT.md          #   This file
+│   └── PROJ-LAYOUT.summary.md  #   Layout quick reference (kept in sync)
+├── .gitignore                  # Ignores node_modules, dist, env files
+├── Makefile                    # Monorepo hook stubs (compile/test no-ops; install → npm)
 ├── package.json                # mallm v0.1.0 — bin entry, scripts, deps
 ├── package-lock.json           # Lockfile
 ├── tsconfig.json               # TypeScript config

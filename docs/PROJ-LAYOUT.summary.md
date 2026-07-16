@@ -12,7 +12,8 @@ mallm/
 ├── schemas/                    # JSON Schema
 ├── examples/                   # Example mallm.yaml files
 ├── dist/                       # Build output (gitignored)
-├── docs/                       # Documentation
+├── docs/                       # PROJ-ARCH + PROJ-LAYOUT (+ summaries)
+├── Makefile                    # Monorepo hook stubs
 ├── package.json                # Config and deps
 ├── tsconfig.json               # TypeScript config
 └── README.md                   # Project docs

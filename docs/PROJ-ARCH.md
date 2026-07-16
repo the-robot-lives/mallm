@@ -68,12 +68,22 @@ Each result carries a `source` tag (`project-local`, `user-config`, `native`, `h
 | `output` | stdout/stderr semantics, exit codes, format list |
 | `skills` / `related` | Cross-references to extended docs and related commands |
 
+## Ecosystem Fit
+
+`mallm` lives under `utilities/agent/` in the Noizu Infra monorepo but is deliberately decoupled from the shell-utility conventions used by its siblings:
+
+- **Not a `k8-lib` consumer** — sibling utilities are shell scripts sourcing `share/k8-lib/`; mallm is a standalone Node.js package with no shared-lib dependency.
+- **Install path differs** — `make install-utilities` symlinks shell tools into `~/.local/bin`; mallm's `Makefile` provides monorepo hook stubs only (`compile`/`test` are no-ops, `install` prints an npm pointer). Actual install is `npm install && npm run build && npm link`.
+- **No `.infra-config.yaml` coupling** — mallm reads nothing from the repo's build/deploy metadata; instead it *documents* those tools. The bundled `examples/` (`helm-upgrade`, `docker-build`) target monorepo utilities, and a repo-root `.mallm/` directory is the intended home for project-local definitions of them.
+- **Purpose in the ecosystem** — gives LLM agents (Claude Code sessions, delegated scouts) structured when-to-use/gotcha context for the repo's DevOps CLIs, beyond what `--help` conveys.
+
 ## Key Decisions
 
 - **YAML over JSON for authoring** — humans write `mallm.yaml`; JSON is output-only (`--json`). YAML's multiline strings suit the prose-heavy `context` section.
 - **Resolution chain over registry** — no central database; discovery is file-system and exec-based, so definitions travel with projects.
 - **Help fallback as degraded mode** — any tool with `--help` gets basic mallm coverage without authoring effort; regex-based extraction handles common flag/subcommand patterns.
 - **No caching** — resolution is fast (stat calls + one optional exec); adding a cache would complicate invalidation for negligible benefit.
+- **Lightweight `validate`** — `mallm validate` checks required fields (`mallm`, `name`, `summary`, argument shape) in code; it does not yet run the full JSON Schema in `schemas/mallm.schema.json`, which serves as the canonical spec for authors and external validators.
 
 ## Technology Stack
 
