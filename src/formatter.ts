@@ -1,5 +1,6 @@
 import type { MallmConfig, ResolvedMallm } from "./schema.js";
 
+// ⟦𓍒𓏉𓆜𓂰⟧ formatMarkdown :: auto-generated pointer for public function formatMarkdown
 export function formatMarkdown(resolved: ResolvedMallm): string {
   const { config: c, source } = resolved;
   const lines: string[] = [];
@@ -203,6 +204,7 @@ export function formatMarkdown(resolved: ResolvedMallm): string {
   return lines.join("\n");
 }
 
+// ⟦𓊻𓏦𓉣𓂌⟧ formatJson :: auto-generated pointer for public function formatJson
 export function formatJson(resolved: ResolvedMallm): string {
   return JSON.stringify(
     {
