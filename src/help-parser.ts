@@ -1,5 +1,6 @@
 import type { MallmConfig } from "./schema.js";
 
+// ⟦𓏃𓌊𓍀𓇯⟧ parseHelp :: auto-generated pointer for public function parseHelp
 export function parseHelp(app: string, helpText: string): MallmConfig {
   const lines = helpText.split("\n");
   const summary = extractSummary(lines);
