@@ -8,7 +8,7 @@
 
 **Data model**: `MallmConfig` — summary, usage examples, typed arguments, subcommands, environment vars, LLM context (when to use, patterns, gotchas), output semantics, skill/related cross-references.
 
-**Ecosystem fit**: lives in `utilities/agent/` of the Noizu Infra monorepo but is standalone — no `k8-lib`, no `.infra-config.yaml` coupling, installed via npm link (Makefile is monorepo hook stubs, not `make install-utilities`). Its job is documenting the repo's DevOps CLIs (helm-upgrade, docker-build, etc.) for LLM agents.
+**Ecosystem fit**: a portfolio submodule of the Noizu Infra monorepo (`Portfolio/Utilities/source/mallm`, branch `mono-repo-dev`) but standalone — no `k8-lib`, no `.infra-config.yaml` coupling, installed via npm link (Makefile is monorepo hook stubs, not `make install-utilities`). Its job is documenting the repo's DevOps CLIs (helm-upgrade, docker-build, etc.) for LLM agents.
 
 **Validation**: `mallm validate` is a lightweight required-field check; `schemas/mallm.schema.json` is the canonical spec but not yet enforced by the CLI.
 
