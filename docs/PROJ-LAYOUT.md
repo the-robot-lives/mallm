@@ -27,6 +27,7 @@ mallm/
 │   └── howto/
 │       └── author-mallm-yaml.md #  Guide: authoring a mallm.yaml for your tool
 ├── .gitignore                  # Ignores node_modules, dist, *.tsbuildinfo, .env*, swap files
+├── CLAUDE.md                   # Claude Code guidance (commands, monorepo rules)
 ├── Makefile                    # Monorepo hook stubs (compile/test no-ops; install → npm)
 ├── CHANGELOG.md                # Release history
 ├── merge-notes.md              # Branch/merge history notes (sep-1 sweep, 2026-09-01)

@@ -14,6 +14,7 @@ mallm/
 ├── dist/                       # Build output (gitignored)
 ├── docs/                       # PROJ-ARCH + PROJ-LAYOUT + PROJ-HOWTO + PROJ-FAQ (+ summaries), howto/
 ├── .gitignore                  # Ignores node_modules, dist, .env*
+├── CLAUDE.md                   # Claude Code guidance
 ├── Makefile                    # Monorepo hook stubs
 ├── CHANGELOG.md                # Release history
 ├── merge-notes.md              # Branch/merge history notes

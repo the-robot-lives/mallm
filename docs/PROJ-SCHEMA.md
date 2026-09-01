@@ -4,7 +4,7 @@
 > changelogs. It is a stateless TypeScript CLI (v0.1.0) that reads YAML documentation
 > files and emits Markdown/JSON. This document therefore covers the artifacts it
 > *does* define: the `mallm.yaml` file format, its JSON Schema, config lookup paths,
-> and the CLI flag grammar.
+> and the CLI flag grammar. For code organization, see [PROJ-LAYOUT.md](PROJ-LAYOUT.md).
 
 ## mallm.yaml — the mallm file format
 

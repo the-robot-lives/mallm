@@ -42,6 +42,8 @@ graph LR
 | Schema | `src/schema.ts` | TypeScript interfaces (`MallmConfig`, `ResolvedMallm`, `MallmArgument`) |
 | JSON Schema | `schemas/mallm.schema.json` | Canonical schema for `mallm.yaml` validation |
 
+→ *Components ↔ directories: see [PROJ-LAYOUT.md](PROJ-LAYOUT.md)*
+
 ## Resolution Chain
 
 The resolver (`resolve_mallm`) tries four sources in order, returning the first hit:
