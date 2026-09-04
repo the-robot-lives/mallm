@@ -19,3 +19,9 @@ make install   # install binaries/completions to ~/.local/bin
 - **All work on worktrees** (from this repo's own .git). Integration-testing consolidation branches: `epic.<group>` forked from `develop` (`feature/if-testing-just-one` for single items); feature→epic merges use PR + squash flow for provenance; a fully-passing epic becomes one PR for the group.
 
 Monorepo-wide ops (secrets/dc, terraform, submodule sweeps): see `../../../../CLAUDE.md` and `docs/secret-management.md` at the trl-infra root.
+
+## Branch & PR Policy
+
+- Submodules sit on **`develop`** — keep your checkout on `develop`.
+- All PRs target **`develop`** (feature/bug/task branches fork from `develop`).
+- **`main` is CI/CD-only**: CI/CD automation performs all merges into `main` (release path). Never merge to or push `main` by hand.
