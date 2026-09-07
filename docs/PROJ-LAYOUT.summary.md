@@ -9,12 +9,17 @@ mallm/
 │   ├── init.ts                 #   Stub generator
 │   ├── help-parser.ts          #   --help parser
 │   └── schema.ts               #   Schema types
-├── schemas/                    # JSON Schema
+├── schemas/                    # JSON Schema (mallm.schema.json)
 ├── examples/                   # Example mallm.yaml files
 ├── dist/                       # Build output (gitignored)
-├── docs/                       # PROJ-ARCH + PROJ-LAYOUT (+ summaries)
+├── docs/                       # PROJ-ARCH + PROJ-LAYOUT + PROJ-HOWTO + PROJ-FAQ (+ summaries), howto/
+├── .gitignore                  # Ignores node_modules, dist, .env*
+├── CLAUDE.md                   # Claude Code guidance
 ├── Makefile                    # Monorepo hook stubs
+├── CHANGELOG.md                # Release history
+├── merge-notes.md              # Branch/merge history notes
 ├── package.json                # Config and deps
+├── package-lock.json           # Lockfile
 ├── tsconfig.json               # TypeScript config
 └── README.md                   # Project docs
 ```
