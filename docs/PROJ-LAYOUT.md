@@ -24,10 +24,17 @@ mallm/
 │   ├── PROJ-HOWTO.summary.md   #   How-to quick reference
 │   ├── PROJ-FAQ.md             #   Frequently asked questions
 │   ├── PROJ-FAQ.summary.md     #   FAQ quick reference
+│   ├── PROJ-SCHEMA.md          #   Schema reference (mallm.yaml format, field-by-field)
+│   ├── PROJ-SCHEMA.summary.md  #   Schema quick reference
+│   ├── THREAT-MODEL.md         #   Threat model (attack surface, vuln register)
+│   ├── THREAT-MODEL.summary.md #   Threat model quick reference
 │   └── howto/
 │       └── author-mallm-yaml.md #  Guide: authoring a mallm.yaml for your tool
+├── .claude/worktrees/          # Agent worktrees (gitignored; see CLAUDE.md)
 ├── .gitignore                  # Ignores node_modules, dist, *.tsbuildinfo, .env*, swap files
 ├── CLAUDE.md                   # Claude Code guidance (commands, monorepo rules)
+├── AGENT.md                    # Harness-shaped guidance sibling for AGENTS.md tools (Codex/Grok/Cursor)
+├── AGENTS.md                   # Same policy as AGENT.md (kept aligned)
 ├── Makefile                    # Monorepo hook stubs (compile/test no-ops; install → npm)
 ├── CHANGELOG.md                # Release history
 ├── merge-notes.md              # Branch/merge history notes (sep-1 sweep, 2026-09-01)
