@@ -1,0 +1,50 @@
+---
+pointers:
+  57876bf9-d451-59f7-b8e3-f05ec207f600:
+    created_at: 2026-09-14T20:42:45.971945Z
+    description: auto-generated pointer for public function listAvailable
+    file_path: src/resolver.ts
+    function: listAvailable
+    line: 100
+    token: 𓃉𓋤𓍋𓂔
+    updated_at: 2026-09-14T20:42:45.971945Z
+  798778f3-031a-576f-a126-e5b211332932:
+    created_at: 2026-09-14T20:42:45.987596Z
+    description: auto-generated pointer for public function resolve_mallm
+    file_path: src/resolver.ts
+    function: resolve_mallm
+    line: 87
+    token: 𓐦𓍍𓁭𓋞
+    updated_at: 2026-09-14T20:42:45.987596Z
+  8cf6c4c6-f0b5-5c06-9364-d3046f827eaa:
+    created_at: 2026-09-14T20:42:45.977185Z
+    description: auto-generated pointer for public function parseHelp
+    file_path: src/help-parser.ts
+    function: parseHelp
+    line: 3
+    token: 𓏃𓌊𓍀𓇯
+    updated_at: 2026-09-14T20:42:45.977185Z
+  ac9a4a2a-3f12-559e-bd4f-f48e0242e743:
+    created_at: 2026-09-14T20:42:45.982408Z
+    description: auto-generated pointer for public function initMallm
+    file_path: src/init.ts
+    function: initMallm
+    line: 9
+    token: 𓇘𓇠𓋩𓅭
+    updated_at: 2026-09-14T20:42:45.982408Z
+  cc05d67d-6486-5801-bb8c-6faf82e0501e:
+    created_at: 2026-09-14T20:42:45.985709Z
+    description: auto-generated pointer for public function formatJson
+    file_path: src/formatter.ts
+    function: formatJson
+    line: 207
+    token: 𓊻𓏦𓉣𓂌
+    updated_at: 2026-09-14T20:42:45.985709Z
+  d2123193-ff36-5046-b63f-558fd840b9f6:
+    created_at: 2026-09-14T20:42:45.989594Z
+    description: auto-generated pointer for public function formatMarkdown
+    file_path: src/formatter.ts
+    function: formatMarkdown
+    line: 3
+    token: 𓍒𓏉𓆜𓂰
+    updated_at: 2026-09-14T20:42:45.989594Z
