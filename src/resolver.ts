@@ -84,7 +84,7 @@ function tryHelpFallback(app: string): ResolvedMallm | null {
   }
 }
 
-// ⟦𓐦𓍍𓁭𓋞⟧ resolve_mallm :: auto-generated pointer for public function resolve_mallm
+// <REMOVED UUID HERE> resolve_mallm :: auto-generated pointer for public function resolve_mallm
 export function resolve_mallm(
   app: string,
   options?: { version?: string }
@@ -97,7 +97,7 @@ export function resolve_mallm(
   );
 }
 
-// ⟦𓃉𓋤𓍋𓂔⟧ listAvailable :: auto-generated pointer for public function listAvailable
+// <REMOVED UUID HERE> listAvailable :: auto-generated pointer for public function listAvailable
 export function listAvailable(): Array<{ name: string; source: string; path: string }> {
   const results: Array<{ name: string; source: string; path: string }> = [];
 
