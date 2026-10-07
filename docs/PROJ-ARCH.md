@@ -4,7 +4,7 @@
 
 `mallm` is a CLI tool that provides structured, LLM-friendly documentation for command-line tools. It resolves documentation from multiple sources via a priority chain, formats it for human or machine consumption, and can bootstrap documentation stubs by parsing `--help` output.
 
-The codebase is a single-process Node.js CLI (~630 lines of TypeScript) with no runtime services, no persistence layer, and no network calls beyond shelling out to target tools.
+The codebase is a single-process Node.js CLI (~800 lines of TypeScript) with no runtime services, no persistence layer, and no network calls beyond shelling out to target tools.
 
 ## System Diagram
 
@@ -72,7 +72,7 @@ Each result carries a `source` tag (`project-local`, `user-config`, `native`, `h
 
 ## Ecosystem Fit
 
-`mallm` is a portfolio submodule of the Noizu Infra monorepo (`Portfolio/Utilities/source/mallm`, remote `the-robot-lives/mallm`, tracked branch `mono-repo-dev`) but is deliberately decoupled from the shell-utility conventions used by its sibling `utilities/` packages:
+`mallm` is a portfolio submodule of the Noizu Infra monorepo (`Portfolio/Utilities/source/mallm`, remote `the-robot-lives/mallm`, tracked branch `develop`) but is deliberately decoupled from the shell-utility conventions used by its sibling `utilities/` packages:
 
 - **Not a `k8-lib` consumer** — sibling utilities are shell scripts sourcing `share/k8-lib/`; mallm is a standalone Node.js package with no shared-lib dependency.
 - **Install path differs** — `make install-utilities` symlinks shell tools into `~/.local/bin`; mallm's `Makefile` provides monorepo hook stubs only (`compile`/`test` are no-ops, `install` prints an npm pointer). Actual install is `npm install && npm run build && npm link`.

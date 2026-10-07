@@ -12,9 +12,11 @@ mallm/
 ├── schemas/                    # JSON Schema (mallm.schema.json)
 ├── examples/                   # Example mallm.yaml files
 ├── dist/                       # Build output (gitignored)
-├── docs/                       # PROJ-ARCH + PROJ-LAYOUT + PROJ-HOWTO + PROJ-FAQ (+ summaries), howto/
+├── docs/                       # PROJ-ARCH + PROJ-LAYOUT + PROJ-HOWTO + PROJ-FAQ + PROJ-SCHEMA + THREAT-MODEL (+ summaries), howto/
+├── .claude/worktrees/          # Agent worktrees (gitignored)
 ├── .gitignore                  # Ignores node_modules, dist, .env*
 ├── CLAUDE.md                   # Claude Code guidance
+├── AGENT.md / AGENTS.md        # Guidance for AGENTS.md-shaped tools (kept aligned)
 ├── Makefile                    # Monorepo hook stubs
 ├── CHANGELOG.md                # Release history
 ├── merge-notes.md              # Branch/merge history notes
