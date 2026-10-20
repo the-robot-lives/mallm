@@ -34,6 +34,10 @@
           "credsRef": {
             "type": "string",
             "description": "Credential reference (a name, never a value)"
+          },
+          "tokenEnv": {
+            "type": "string",
+            "description": "git: env var NAME holding the write-back push/PR token (never a value)"
           }
         }
       }

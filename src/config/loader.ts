@@ -64,6 +64,7 @@ export function parsePlatformConfig(
         branch: str(entry.branch),
         priority: numberOr(undefined, entry.priority) ?? DEFAULT_SOURCE_PRIORITY,
         credsRef: str(entry.credsRef),
+        tokenEnv: str(entry.tokenEnv),
       };
       if (source.kind === "http" && !source.url) continue;
       if (source.kind === "git" && !source.repo) continue;

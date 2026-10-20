@@ -132,6 +132,26 @@ export async function probeToolVersion(
   }
 }
 
+/**
+ * Light OS context without the PATH scan / version probes — for `show` folds
+ * and other read paths where the full probe is too heavy.
+ */
+export interface OsContext {
+  flavor: OsFlavor;
+  version: string;
+  arch: string;
+  shell: string;
+}
+
+export function osContext(env: EnvLike = process.env): OsContext {
+  return {
+    ...detectOs(),
+    arch: process.arch,
+    shell:
+      env.SHELL ?? env.ComSpec ?? (platform() === "win32" ? "cmd.exe" : "/bin/sh"),
+  };
+}
+
 export async function probeEnvironment(
   opts: { extraTools?: string[]; env?: EnvLike; execFn?: ExecFn } = {}
 ): Promise<EnvironmentProbe> {

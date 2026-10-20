@@ -13,6 +13,7 @@ export const SESSION_BUCKETS = [
   "installed",
   "approvals",
   "decisions",
+  "howto",
 ] as const;
 
 export type SessionBucket = (typeof SESSION_BUCKETS)[number];

@@ -20,6 +20,8 @@ export interface MallmSource {
   priority?: number;
   /** reference to a credential holder; never a credential value itself */
   credsRef?: string;
+  /** git: env var NAME holding the push/PR token for write-back (never a value) */
+  tokenEnv?: string;
 }
 
 export interface InferenceConfig {
