@@ -52,7 +52,7 @@ test("dir adapter reports a missing directory as an error", () => {
 });
 
 test("payload parsing handles arrays, wrapped docs, and YAML/JSON", () => {
-  const fromArray = parseDocsPayload("- name: a\nsummary: x\n", "src");
+  const fromArray = parseDocsPayload("- name: a\n  summary: x\n", "src");
   assert.equal(fromArray.length, 1);
   assert.equal(fromArray[0].name, "a");
 
@@ -169,7 +169,7 @@ test("http adapter: 200 pins payload + ETag, 304 reuses cache (stubbed fetch, no
     }
     return {
       status: 200,
-      text: async () => "- name: fake-doc\nsummary: from the wire\n",
+      text: async () => "- name: fake-doc\n  summary: from the wire\n",
       headers: { get: () => etag },
     };
   };

@@ -124,5 +124,5 @@ test("uuidV5 sets version 5 and RFC 4122 variant bits", () => {
   assert.equal(hex.slice(12, 16).startsWith("5"), true);
   assert.equal(parseInt(hex.slice(16, 18), 16) >> 6, 0b10);
   assert.match(uuidToString(uuid), /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-  assert.equal(encodeGlyphs(uuid).length, 4);
+  assert.equal([...encodeGlyphs(uuid)].length, 4); // astral glyphs: 4 code points, 8 UTF-16 units
 });

@@ -93,15 +93,13 @@ function compact(value: unknown): string {
 
 export class SessionKV {
   readonly token: string;
-  readonly existsOnDisk: boolean;
   private data: SessionData;
   private readonly filePath: string;
 
-  private constructor(token: string, filePath: string, data: SessionData, existsOnDisk: boolean) {
+  private constructor(token: string, filePath: string, data: SessionData) {
     this.token = token;
     this.filePath = filePath;
     this.data = data;
-    this.existsOnDisk = existsOnDisk;
   }
 
   static open(
@@ -120,7 +118,12 @@ export class SessionKV {
         data = null;
       }
     }
-    return new SessionKV(token, filePath, data ?? emptyData(token), exists && data !== null);
+    return new SessionKV(token, filePath, data ?? emptyData(token));
+  }
+
+  /** Whether the session file is on disk right now (live — reflects clear()/save()). */
+  get existsOnDisk(): boolean {
+    return existsSync(this.filePath);
   }
 
   get(bucket: SessionBucket, key: string): unknown {

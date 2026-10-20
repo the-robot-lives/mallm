@@ -67,6 +67,7 @@ test("project .mallm/config.yaml overrides the user layer", (t) => {
   const env = fakeEnv(xdg);
 
   // user layer
+  mkdirSync(join(xdg.config, "mallm"), { recursive: true });
   writeFileSync(
     userConfigPath(env),
     "mallm: '1.1'\nname: mallm-config\nsummary: user layer\nsessionTtl: 200\n"
@@ -94,6 +95,7 @@ test("a malformed layer is skipped, not fatal", (t) => {
   const xdg = tempXdg();
   t.after(() => xdg.restore());
   const env = fakeEnv(xdg);
+  mkdirSync(join(xdg.config, "mallm"), { recursive: true });
   writeFileSync(userConfigPath(env), "{{{{ not yaml ::\n\t\x00garbage");
   const cfg = resolvePlatformConfig(env, tempDir());
   assert.equal(cfg.sessionTtl, DEFAULT_SESSION_TTL_SECONDS);
