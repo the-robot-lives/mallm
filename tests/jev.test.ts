@@ -73,7 +73,7 @@ test("happy path: bearer header, body shape, filtered answers", async () => {
         { id: "docker:b", answer: true },
         { id: "docker:s", answer: 7 },
         { id: "bogus", answer: "x" },
-        { id: "docker:s", answer: "wrong-type" },
+        { id: "docker:s", answer: null },
       ],
     }),
   }));
