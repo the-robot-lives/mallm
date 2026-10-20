@@ -9,7 +9,7 @@ import {
   resolvePlatformConfig,
   upsertSource,
   userConfigPath,
-} from "../src/config/loader.js";
+} from "../src/config/index.js";
 import { fakeEnv, tempDir, tempXdg } from "./helpers.js";
 
 const V10_FIXTURE = readFileSync(
