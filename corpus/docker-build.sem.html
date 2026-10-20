@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en" data-sem-theme="minimal-tech-light">
+<head>
+<meta charset="utf-8">
+<title>mallm — docker build (SemText v0.8)</title>
+<link rel="stylesheet" href="semtext/latest/semtext.css">
+<script src="semtext/latest/semtext.js"></script>
+</head>
+<body>
+<sem-enhanced-document role="main" tags="docker,docker-build,buildkit,buildx,containers,install,daemon" sem-dims='{"os":{"type":"enum","values":["macos","linux","windows"]},"os-version":{"type":"loose"},"os-build":{"type":"enum","values":["10 22H2","11 23H2","11 24H2"]},"tool.docker":{"type":"semver"}}'>
+<sem-reader controls="outline,progress,focus,type,color,print,audience"></sem-reader>
+<agent>
+<name>mallm docker-build guide</name>
+<bio>Bootstrap corpus doc for the docker entry of the mallm tool registry (manifests branch).</bio>
+<instructions>Install the Docker engine, keep the daemon running per OS, and run docker builds. Platform-dependent installers, service management, and daemon config locations live in projection blocks: project this document with semtext-validate.mjs --ctx os=linux,tool.docker=26.1.4 before handing it to a model. Sections tagged audience="agent" carry exact commands and expected output.</instructions>
+</agent>
+<sem-audiences>
+<sem-profile id="reader" label="Reader"></sem-profile>
+<sem-profile id="operator" label="Operator" implies="reader"></sem-profile>
+<sem-profile id="agent" label="Agent" implies="operator"></sem-profile>
+</sem-audiences>
+<h1 data-kind="title">docker build — engine install, daemon, and builds</h1>
+<p>Install Docker Desktop or Docker Engine for your OS, keep the daemon running through the platform service manager, then build images with docker build and buildx — including the BuildKit output format to expect per version.</p>
+<sem-tldr>Install Docker Desktop on macOS and Windows (<sem-code>brew install --cask docker</sem-code> / <sem-code>winget install Docker.DockerDesktop</sem-code>), enable the systemd service on Linux, then build with <sem-code>docker build -t name:tag .</sem-code>. Docker 23.0+ uses BuildKit by default, so expect <sem-code>#1 [internal] load build definition</sem-code> output, not <sem-code>Step 1/N</sem-code>.</sem-tldr>
+<sem-views id="guide">
+<sem-view name="Quickstart" active role="tabpanel">
+<sem-procedure kind="runbook">
+<sem-step>Install: <sem-alternatives for="os"><sem-variant is="macos"><sem-code>brew install --cask docker</sem-code> then launch Docker Desktop once</sem-variant><sem-variant is="linux"><sem-code>curl -fsSL https://get.docker.com | sh</sem-code> then <sem-code>sudo systemctl enable --now docker</sem-code></sem-variant><sem-variant is="windows"><sem-code>winget install Docker.DockerDesktop</sem-code> then start Docker Desktop</sem-variant></sem-alternatives></sem-step>
+<sem-step>Verify: <sem-code>docker version</sem-code> shows client and server sections</sem-step>
+<sem-step>Build: <sem-code>docker build -t mallm-demo:1.0 .</sem-code> from the directory holding the Dockerfile</sem-step>
+</sem-procedure>
+</sem-view>
+<sem-view name="Deep" role="tabpanel">
+<p>Below: per-OS install paths, real service management (launchd-backed Desktop on macOS, systemd unit on Linux, the com.docker.service Windows service plus WSL2 backend), daemon.json locations, Windows feature-channel differences, and the version guards for BuildKit and buildx.</p>
+</sem-view>
+</sem-views>
+<sem-section>
+<sem-howto>
+<name>Install the Docker engine per OS</name>
+<tags>docker install desktop engine winget brew apt dnf wsl2</tags>
+<p>Goal: get the docker CLI talking to a running engine with the OS-native packaging.</p>
+<sem-alternatives for="os">
+<sem-variant is="macos">
+<p>Homebrew cask installs Docker Desktop: <sem-code>brew install --cask docker</sem-code>, then launch it once from /Applications and grant the privileged-helper prompt. The app drops <sem-code>docker</sem-code>, <sem-code>docker-compose</sem-code>, and <sem-code>docker buildx</sem-code> CLI symlinks under <sem-code>/usr/local/bin</sem-code> on first run.</p>
+</sem-variant>
+<sem-variant is="linux">
+<p>Docker's repo script installs docker-ce plus buildx and compose plugins: <sem-code>curl -fsSL https://get.docker.com | sh</sem-code>. On apt systems that is the docker-ce package family; on dnf systems the docker-ce-stable repo. Add yourself to the group so sudo is not needed: <sem-code>sudo usermod -aG docker $USER</sem-code>, then re-login or <sem-code>newgrp docker</sem-code>.</p>
+</sem-variant>
+<sem-variant is="windows">
+<p>Winget: <sem-code>winget install Docker.DockerDesktop</sem-code>. The Desktop requires the WSL2 backend — install it first with <sem-code>wsl --install --no-distribution</sem-code> and reboot when prompted. Scoop users: <sem-code>scoop install docker</sem-code> adds the CLI only; the Desktop install is still needed for the engine.</p>
+</sem-variant>
+</sem-alternatives>
+<sem-alternatives for="os-build">
+<sem-variant is="11 24H2">
+<p>Windows 11 24H2: the WSL2 kernel ships in-box. After installing Docker Desktop, confirm with <sem-code>wsl --status</sem-code> that the default version is 2 and <sem-code>docker version</sem-code> answers.</p>
+</sem-variant>
+<sem-variant is="11 23H2">
+<p>Windows 11 23H2: update the WSL2 kernel before the Desktop install — <sem-code>wsl --update</sem-code> — or the engine can fail to start with a plumbing/WSL error.</p>
+</sem-variant>
+<sem-variant is="10 22H2">
+<p>Windows 10 22H2 (build 19045): supported by current Docker Desktop, but WSL2 must be enabled explicitly — <sem-code>wsl --install --no-distribution</sem-code> — and a reboot is required before the engine starts.</p>
+</sem-variant>
+<sem-variant>
+<p>Older Windows 10 builds: current Docker Desktop releases are not supported (19044 is the floor). Use a Linux VM as the build host instead of an unsupported in-place upgrade.</p>
+</sem-variant>
+</sem-alternatives>
+</sem-howto>
+<sem-howto>
+<name>Keep the daemon running per OS</name>
+<tags>docker daemon service systemd launchd com.docker.service</tags>
+<p>Goal: start the engine at boot and check its health the way each OS manages services.</p>
+<sem-alternatives for="os">
+<sem-variant is="macos">
+<p>Docker Desktop is a login app, not a unit you enable: start it with <sem-code>open -a Docker</sem-code>; its launchd helpers (com.docker.vmnetd and friends) load at install time. Wait for the whale menu-bar icon, then <sem-code>docker version</sem-code> reports the server. Logs: <sem-code>~/Library/Containers/com.docker.docker/Data/log/</sem-code>.</p>
+</sem-variant>
+<sem-variant is="linux">
+<p>systemd owns the engine: <sem-code>sudo systemctl enable --now docker</sem-code> starts it now and at boot. Health: <sem-code>systemctl status docker</sem-code>; logs: <sem-code>journalctl -u docker -f</sem-code>; after a daemon.json edit: <sem-code>sudo systemctl restart docker</sem-code>.</p>
+</sem-variant>
+<sem-variant is="windows">
+<p>The Windows service <sem-code>com.docker.service</sem-code> (Docker Desktop Service) must be running and set to Automatic — check with <sem-code>Get-Service com.docker.service</sem-code>. The engine itself lives in WSL2 distros (<sem-code>docker-desktop</sem-code>); if builds hang, <sem-code>wsl --shutdown</sem-code> then restart the Desktop.</p>
+</sem-variant>
+</sem-alternatives>
+</sem-howto>
+<sem-howto>
+<name>Point the daemon at the right config file</name>
+<tags>docker daemon.json config settings desktop</tags>
+<p>Goal: edit daemon settings (registry mirrors, log drivers, data-root) in the file your OS actually reads.</p>
+<sem-alternatives for="os">
+<sem-variant is="linux">
+<p>Edit <sem-code>/etc/docker/daemon.json</sem-code> directly, validate with <sem-code>dockerd --validate --config-file /etc/docker/daemon.json</sem-code>, then <sem-code>sudo systemctl restart docker</sem-code>.</p>
+</sem-variant>
+<sem-variant is="macos">
+<p>The engine runs inside the Desktop VM: open Docker Desktop, Settings, Docker Engine, and edit the JSON there — it persists to <sem-code>~/Library/Group Containers/group.com.docker/settings.json</sem-code>. Apply &amp; Restart from the UI; there is no host-level /etc/docker.</p>
+</sem-variant>
+<sem-variant is="windows">
+<p>Same Desktop UI path as macOS. On disk the Desktop keeps state under <sem-code>%APPDATA%\Docker\</sem-code> — settings-store.json on Desktop 4.35 and newer, settings.json before that; edit through the UI, not the file, to avoid being overwritten.</p>
+</sem-variant>
+</sem-alternatives>
+</sem-howto>
+</sem-section>
+<sem-section>
+<h2>Build output per version</h2>
+<sem-variant for="tool.docker" is=">=23.0.0">
+<p>BuildKit is the default builder: builds print <sem-code>#1 [internal] load build definition from Dockerfile</sem-code> style progress and finish with an <sem-code>exporting to image</sem-code> block. Do not set DOCKER_BUILDKIT=1 on 23.0+ — it is already on; the env var only matters on older engines.</p>
+</sem-variant>
+<sem-variant for="tool.docker" is="<23.0.0">
+<p>Legacy builder: output is <sem-code>Step 1/4 : FROM alpine:3.20</sem-code> lines. Prefix BuildKit explicitly with <sem-code>DOCKER_BUILDKIT=1 docker build ...</sem-code> to get cache mounts and parallel stages.</p>
+</sem-variant>
+<p sem-for="tool.docker" sem-is=">=19.03.0">The buildx plugin ships with the CLI: use <sem-code>docker buildx build --platform linux/amd64,linux/arm64 -t user/app:1.0 --push .</sem-code> for multi-architecture images from one command.</p>
+</sem-section>
+<sem-section audience="agent">
+<h2>Agent build runbook</h2>
+<sem-howto audience="agent">
+<name>Build an image and verify it runs</name>
+<tags>docker build verify agent expected-output buildkit</tags>
+<p>Goal: from a directory with a Dockerfile, build a tagged image, prove it runs, and clean up — with exact commands and expected output.</p>
+<sem-procedure kind="runbook" audience="agent">
+<sem-step>Run <sem-code>docker version --format '{{.Server.Version}}'</sem-code>. Expected: a semver line such as <sem-code>26.1.4</sem-code>, exit 0. An error template or exit 1 means the daemon is down — start it per the service how-to before building.</sem-step>
+<sem-step>Run <sem-code>docker build -t mallm-demo:1.0 .</sem-code>. Expected on 23.0+: BuildKit lines starting <sem-code>#1 [internal] load build definition from Dockerfile</sem-code> ending with <sem-code>exporting to image</sem-code> and <sem-code>naming to docker.io/library/mallm-demo:1.0</sem-code>; exit 0.</sem-step>
+<sem-step>Run <sem-code>docker run --rm mallm-demo:1.0</sem-code>. Expected: the image entrypoint output, exit 0.</sem-step>
+<sem-step>Run <sem-code>docker image rm mallm-demo:1.0</sem-code>. Expected: <sem-code>Untagged: mallm-demo:1.0</sem-code> then <sem-code>Deleted: sha256:...</sem-code>, exit 0.</sem-step>
+</sem-procedure>
+</sem-howto>
+<p data-audience="agent">Failure mode: <sem-code>failed to solve: ... no such file or directory</sem-code> during <sem-code>#1 [internal] load build definition</sem-code> almost always means the build context directory is wrong — the Dockerfile path is resolved relative to the context, not the shell cwd of the agent.</p>
+</sem-section>
+<p>See also: <sem-reference cite="corpus/git.sem.html">git setup</sem-reference> for checking out the sources you build, and <sem-reference cite="corpus/helm-upgrade.sem.html">helm upgrade</sem-reference> for deploying what you pushed.</p>
+</sem-enhanced-document>
+</body>
+</html>

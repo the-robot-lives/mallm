@@ -1,0 +1,78 @@
+# mallm tool registry — manifests branch
+#
+# Fields per tool:
+#   aliases   — alternate names callers may use to address the tool
+#   version   — grammar hint for version matching + example guard ranges
+#               (grammar: semver | loose | enum; mirrors SemText v0.8 sem-dims)
+#   installers— per-OS-flavor install commands (macos: brew; linux: apt/dnf;
+#               windows: winget/scoop); value = package id passed to the
+#               package manager ("--cask docker" = brew install --cask docker)
+#   doc       — corpus doc filename under corpus/ (SemText v0.8, .sem.html)
+
+tools:
+  git:
+    aliases:
+      - git
+      - git-cli
+      - git-scm
+    version:
+      grammar: semver
+      examples:
+        - ">=2.40.0 <3.0.0"
+        - ">=2.38.0"
+        - "2.39.x"
+    installers:
+      macos:
+        brew: git
+      linux:
+        apt: git
+        dnf: git
+      windows:
+        winget: Git.Git
+        scoop: git
+    doc: git.sem.html
+
+  docker:
+    aliases:
+      - docker
+      - docker-build
+      - docker build
+      - buildx
+    version:
+      grammar: semver
+      examples:
+        - ">=23.0.0 <28.0.0"
+        - ">=19.03.0"
+        - "26.x"
+    installers:
+      macos:
+        brew: "--cask docker"   # Docker Desktop; CLI engines via colima
+      linux:
+        apt: docker-ce          # docker.io on plain Debian/Ubuntu mirrors
+        dnf: docker-ce          # needs the docker-ce repo; fallback: docker.io
+      windows:
+        winget: Docker.DockerDesktop
+        scoop: docker           # docker CLI only; Desktop still via winget
+    doc: docker-build.sem.html
+
+  helm:
+    aliases:
+      - helm
+      - helm-upgrade
+      - helm upgrade
+    version:
+      grammar: semver
+      examples:
+        - ">=3.0.0 <4.0.0"
+        - ">=3.2.0"
+        - "3.16.x"
+    installers:
+      macos:
+        brew: helm
+      linux:
+        apt: helm               # baltocdn helm apt repo
+        dnf: helm               # Fedora official repos
+      windows:
+        winget: Helm.Helm
+        scoop: helm
+    doc: helm-upgrade.sem.html

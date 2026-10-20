@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-sem-theme="minimal-tech-light">
+<head>
+<meta charset="utf-8">
+<title>mallm — git install and config (SemText v0.8)</title>
+<link rel="stylesheet" href="semtext/latest/semtext.css">
+<script src="semtext/latest/semtext.js"></script>
+</head>
+<body>
+<sem-enhanced-document role="main" tags="git,vcs,version-control,install,config" sem-dims='{"os":{"type":"enum","values":["macos","linux","windows"]},"os-version":{"type":"loose"},"os-build":{"type":"enum","values":["10 22H2","11 23H2","11 24H2"]},"tool.git":{"type":"semver"}}'>
+<sem-reader controls="outline,progress,focus,type,color,print,audience"></sem-reader>
+<agent>
+<name>mallm git guide</name>
+<bio>Bootstrap corpus doc for the git entry of the mallm tool registry (manifests branch).</bio>
+<instructions>Install and configure git on macOS, Linux, and Windows. Every platform-dependent path, installer, and credential helper lives in projection blocks: project this document with semtext-validate.mjs --ctx os=linux,tool.git=2.43.0 before handing it to a model. Sections tagged audience="agent" carry exact commands and expected output for unattended execution.</instructions>
+</agent>
+<sem-audiences>
+<sem-profile id="reader" label="Reader"></sem-profile>
+<sem-profile id="operator" label="Operator" implies="reader"></sem-profile>
+<sem-profile id="agent" label="Agent" implies="operator"></sem-profile>
+</sem-audiences>
+<h1 data-kind="title">git — install and configure</h1>
+<p>Install the git version-control client, point it at the right package manager for your OS, set user identity, and wire the platform credential helper so HTTPS remotes stop asking for passwords.</p>
+<sem-tldr>Install with your OS package manager, set <sem-code>user.name</sem-code> and <sem-code>user.email</sem-code> globally, and pick the credential helper your OS ships (osxkeychain, libsecret, or Git Credential Manager). Git is a CLI with no daemon — nothing to start or enable.</sem-tldr>
+<sem-views id="guide">
+<sem-view name="Quickstart" active role="tabpanel">
+<sem-procedure kind="runbook">
+<sem-step>Install: <sem-alternatives for="os"><sem-variant is="macos"><sem-code>brew install git</sem-code></sem-variant><sem-variant is="linux"><sem-code>sudo apt-get install git</sem-code> or <sem-code>sudo dnf install git</sem-code></sem-variant><sem-variant is="windows"><sem-code>winget install Git.Git</sem-code></sem-variant></sem-alternatives></sem-step>
+<sem-step>Identity: <sem-code>git config --global user.name "Your Name"</sem-code> and <sem-code>git config --global user.email "you@example.com"</sem-code></sem-step>
+<sem-step>Verify: <sem-code>git --version</sem-code> prints <sem-code>git version 2.x.y</sem-code></sem-step>
+</sem-procedure>
+</sem-view>
+<sem-view name="Deep" role="tabpanel">
+<p>Below: per-OS install paths and PATH notes, config file locations and precedence, credential helper setup per OS, version-specific behavior guards, and an agent-facing verification runbook. Config precedence is always system, then global (<sem-code>--global</sem-code>), then local (<sem-code>--local</sem-code>, the repo's <sem-code>.git/config</sem-code>) — last write wins per scope.</p>
+</sem-view>
+</sem-views>
+<sem-section>
+<sem-howto>
+<name>Install git per OS</name>
+<tags>git install homebrew apt dnf winget scoop</tags>
+<p>Goal: get a current git binary from the platform package manager and confirm it is first on PATH.</p>
+<sem-alternatives for="os">
+<sem-variant is="macos">
+<p>Homebrew: <sem-code>brew install git</sem-code>. The binary lands at <sem-code>/opt/homebrew/bin/git</sem-code> on Apple Silicon (<sem-code>/usr/local/bin/git</sem-code> on Intel) and shadows the Command Line Tools git at <sem-code>/usr/bin/git</sem-code> because Homebrew is earlier on PATH. Keep the CLT installed — <sem-code>xcode-select --install</sem-code> — since some tooling shells out to it.</p>
+</sem-variant>
+<sem-variant is="linux">
+<p>Debian/Ubuntu: <sem-code>sudo apt-get update &amp;&amp; sudo apt-get install git</sem-code>. Fedora/RHEL: <sem-code>sudo dnf install git</sem-code>. The binary is <sem-code>/usr/bin/git</sem-code> on both families.</p>
+</sem-variant>
+<sem-variant is="windows">
+<p>Winget: <sem-code>winget install Git.Git</sem-code> (Scoop alternative: <sem-code>scoop install git</sem-code>). Default install root is <sem-code>%ProgramFiles%\Git</sem-code>; <sem-code>git.exe</sem-code> is at <sem-code>%ProgramFiles%\Git\cmd\git.exe</sem-code>, and the installer puts that directory on PATH. Use Git Bash (<sem-code>%ProgramFiles%\Git\bin\bash.exe</sem-code>) for shell scripts; both shells run the same git.</p>
+</sem-variant>
+<sem-variant>
+<p>Other platforms or pinned versions: build from source — <sem-code>make prefix=/usr/local all</sem-code> then <sem-code>sudo make prefix=/usr/local install</sem-code> after installing the tarball from kernel.org.</p>
+</sem-variant>
+</sem-alternatives>
+</sem-howto>
+<sem-howto>
+<name>Find the config files and set identity</name>
+<tags>git config gitconfig identity precedence</tags>
+<p>Goal: know which file each <sem-code>git config</sem-code> scope edits on your OS and set the identity every commit carries.</p>
+<sem-alternatives for="os">
+<sem-variant is="macos">
+<p>Global config: <sem-code>~/.gitconfig</sem-code>. System config for Homebrew git: <sem-code>$(brew --prefix)/etc/gitconfig</sem-code>; the Apple git under <sem-code>/Library/Developer/CommandLineTools</sem-code> keeps its own. Set identity with <sem-code>git config --global user.name "Your Name"</sem-code> and <sem-code>git config --global user.email "you@example.com"</sem-code>.</p>
+</sem-variant>
+<sem-variant is="linux">
+<p>Global config: <sem-code>~/.gitconfig</sem-code>; system config: <sem-code>/etc/gitconfig</sem-code>. Same identity commands — <sem-code>git config --global user.name</sem-code> and <sem-code>--global user.email</sem-code>. Check effective values plus their origin with <sem-code>git config --list --show-origin</sem-code>.</p>
+</sem-variant>
+<sem-variant is="windows">
+<p>Global config: <sem-code>%USERPROFILE%\.gitconfig</sem-code> (Git Bash sees the same file as <sem-code>~/.gitconfig</sem-code>). System config: <sem-code>%ProgramFiles%\Git\etc\gitconfig</sem-code>. Identity commands are identical from PowerShell, cmd, or Git Bash.</p>
+</sem-variant>
+</sem-alternatives>
+</sem-howto>
+<sem-howto>
+<name>Wire the OS credential helper</name>
+<tags>git credentials osxkeychain libsecret gcm https</tags>
+<p>Goal: make HTTPS remotes authenticate without prompting, using the helper your OS ships.</p>
+<sem-alternatives for="os">
+<sem-variant is="macos">
+<p>osxkeychain is built in: <sem-code>git config --global credential.helper osxkeychain</sem-code>. Tokens land in Keychain Access under the login keychain; remove a stale entry with <sem-code>git credential-osxkeychain erase</sem-code> on stdin.</p>
+</sem-variant>
+<sem-variant is="linux">
+<p>Build libsecret from the git contrib tree (<sem-code>/usr/share/doc/git/contrib/credential/libsecret</sem-code>), then <sem-code>git config --global credential.helper /usr/local/bin/git-credential-libsecret</sem-code>. Quick fallback: <sem-code>credential.helper store</sem-code> — plaintext at <sem-code>~/.git-credentials</sem-code>, fine for throwaway machines only.</p>
+</sem-variant>
+<sem-variant is="windows">
+<p>Git for Windows bundles Git Credential Manager and enables it by default: <sem-code>git config --global credential.helper manager</sem-code>. It stores tokens in Windows Credential Manager and handles GitHub and Azure DevOps OAuth flows interactively.</p>
+</sem-variant>
+</sem-alternatives>
+</sem-howto>
+</sem-section>
+<sem-section>
+<h2>Version-specific behavior</h2>
+<sem-variant for="tool.git" is=">=2.35.2">
+<p>Dubious-ownership protection: working trees owned by another UID make git fail with <sem-code>fatal: detected dubious ownership</sem-code>. Trust the path explicitly with <sem-code>git config --global --add safe.directory /path/to/repo</sem-code> — common inside containers and WSL.</p>
+</sem-variant>
+<sem-variant for="os-version" is=">=14">
+<p>macOS 14 or newer: the Command Line Tools git is already 2.39+, so CLT-only machines are current enough for most workflows; install Homebrew git anyway to track the newest release.</p>
+</sem-variant>
+<p sem-for="tool.git" sem-is=">=2.23.0">Modern branch surgery is available: prefer <sem-code>git switch</sem-code> and <sem-code>git restore</sem-code> over the overloaded <sem-code>git checkout</sem-code>.</p>
+<p sem-for="tool.git" sem-is=">=2.28.0">Set the initial branch name once and silence the hint on every <sem-code>git init</sem-code>: <sem-code>git config --global init.defaultBranch main</sem-code>.</p>
+</sem-section>
+<sem-section audience="agent">
+<h2>Agent verification runbook</h2>
+<sem-howto audience="agent">
+<name>Verify a git install end to end</name>
+<tags>git verify agent expected-output</tags>
+<p>Goal: prove the binary, identity config, and credential helper from a fresh shell with exact commands and expected output.</p>
+<sem-procedure kind="runbook" audience="agent">
+<sem-step>Run <sem-code>git --version</sem-code>. Expected stdout: <sem-code>git version 2.46.0</sem-code> — any 2.x at or above the target baseline; exit 0.</sem-step>
+<sem-step>Run <sem-code>git config --global user.name &amp;&amp; git config --global user.email</sem-code>. Expected: two non-empty lines, exit 0. Empty output with exit 1 means identity is unset — set both before any commit.</sem-step>
+<sem-step>Run <sem-code>git config --global credential.helper</sem-code>. Expected: <sem-code>osxkeychain</sem-code> on macOS, a libsecret path or <sem-code>store</sem-code> on Linux, <sem-code>manager</sem-code> on Windows. Exit 1 (no output) means HTTPS pushes will prompt.</sem-step>
+<sem-step>Run <sem-code>git init --temporary /tmp/mallm-git-check &amp;&amp; git -C /tmp/mallm-git-check status --short</sem-code>. Expected: empty status, exit 0; then remove the directory.</sem-step>
+</sem-procedure>
+</sem-howto>
+<p data-audience="agent">Failure mode: <sem-code>command not found</sem-code> after install on macOS means PATH was read before Homebrew linked the binary — re-read PATH or open a new shell, do not reinstall.</p>
+</sem-section>
+<p>See also: <sem-reference cite="corpus/docker-build.sem.html">docker build</sem-reference> for containerized builds and <sem-reference cite="corpus/helm-upgrade.sem.html">helm upgrade</sem-reference> for chart deploys.</p>
+</sem-enhanced-document>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-sem-theme="minimal-tech-light">
+<head>
+<meta charset="utf-8">
+<title>mallm — helm upgrade (SemText v0.8)</title>
+<link rel="stylesheet" href="semtext/latest/semtext.css">
+<script src="semtext/latest/semtext.js"></script>
+</head>
+<body>
+<sem-enhanced-document role="main" tags="helm,helm-upgrade,kubernetes,charts,release,install,rollback" sem-dims='{"os":{"type":"enum","values":["macos","linux","windows"]},"os-version":{"type":"loose"},"os-build":{"type":"enum","values":["10 22H2","11 23H2","11 24H2"]},"tool.helm":{"type":"semver"}}'>
+<sem-reader controls="outline,progress,focus,type,color,print,audience"></sem-reader>
+<agent>
+<name>mallm helm-upgrade guide</name>
+<bio>Bootstrap corpus doc for the helm entry of the mallm tool registry (manifests branch).</bio>
+<instructions>Install the Helm 3 CLI, find its per-OS config locations, and run idempotent helm upgrade --install releases with values, namespaces, and rollback. Projection blocks carry the OS differences: project this document with semtext-validate.mjs --ctx os=macos,tool.helm=3.16.1 before handing it to a model. Sections tagged audience="agent" carry exact commands and expected output.</instructions>
+</agent>
+<sem-audiences>
+<sem-profile id="reader" label="Reader"></sem-profile>
+<sem-profile id="operator" label="Operator" implies="reader"></sem-profile>
+<sem-profile id="agent" label="Agent" implies="operator"></sem-profile>
+</sem-audiences>
+<h1 data-kind="title">helm upgrade — install, configure, and release</h1>
+<p>Install the Helm CLI the way your OS packages it, know where repositories and kubeconfig live on each platform, and run idempotent <sem-code>helm upgrade --install</sem-code> releases with values files, namespaces, history, and rollback.</p>
+<sem-tldr>Helm is a CLI, not a daemon — nothing to enable. Install it, check <sem-code>helm env</sem-code> for the config dir, then <sem-code>helm upgrade --install myapp ./chart -n apps --create-namespace</sem-code>: it installs the release if absent and upgrades it otherwise, leaving a revision you can roll back with <sem-code>helm rollback</sem-code>.</sem-tldr>
+<sem-views id="guide">
+<sem-view name="Quickstart" active role="tabpanel">
+<sem-procedure kind="runbook">
+<sem-step>Install: <sem-alternatives for="os"><sem-variant is="macos"><sem-code>brew install helm</sem-code></sem-variant><sem-variant is="linux"><sem-code>sudo apt-get install helm</sem-code> (baltocdn repo) or <sem-code>sudo dnf install helm</sem-code></sem-variant><sem-variant is="windows"><sem-code>winget install Helm.Helm</sem-code></sem-variant></sem-alternatives></sem-step>
+<sem-step>Target the cluster: <sem-code>kubectl config current-context</sem-code> shows the context helm will use</sem-step>
+<sem-step>Release: <sem-code>helm upgrade --install myapp ./chart -n apps --create-namespace -f values.yaml</sem-code></sem-step>
+</sem-procedure>
+</sem-view>
+<sem-view name="Deep" role="tabpanel">
+<p>Below: per-OS install paths and config locations (XDG dirs on macOS and Linux versus %APPDATA% on Windows), the Helm 2 versus 3 model, version-guarded flags, the upgrade flag reference table, and an agent runbook with expected output.</p>
+</sem-view>
+</sem-views>
+<sem-section>
+<sem-howto>
+<name>Install the helm CLI per OS</name>
+<tags>helm install brew apt baltocdn dnf winget scoop</tags>
+<p>Goal: get the helm binary on PATH from the platform package manager.</p>
+<sem-alternatives for="os">
+<sem-variant is="macos">
+<p>Homebrew: <sem-code>brew install helm</sem-code> — binary at <sem-code>/opt/homebrew/bin/helm</sem-code> (Apple Silicon) or <sem-code>/usr/local/bin/helm</sem-code> (Intel).</p>
+</sem-variant>
+<sem-variant is="linux">
+<p>Debian/Ubuntu via the baltocdn repo: <sem-code>curl -fsSL https://baltocdn.com/helm/stable/debian/all.repo.txt | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list</sem-code>, then <sem-code>sudo apt-get update &amp;&amp; sudo apt-get install helm</sem-code>. Fedora: <sem-code>sudo dnf install helm</sem-code> from the official repos. Binary lands at <sem-code>/usr/bin/helm</sem-code>.</p>
+</sem-variant>
+<sem-variant is="windows">
+<p>Winget: <sem-code>winget install Helm.Helm</sem-code> (Scoop alternative: <sem-code>scoop install helm</sem-code>). helm.exe lands on PATH — confirm with <sem-code>where helm</sem-code> from cmd.</p>
+</sem-variant>
+<sem-variant>
+<p>No package manager or a pinned version: fetch the tarball — <sem-code>curl -fsSL https://get.helm.sh/helm-v3.16.1-linux-amd64.tar.gz | tar xz</sem-code> and move the unpacked <sem-code>helm</sem-code> to <sem-code>/usr/local/bin/</sem-code>.</p>
+</sem-variant>
+</sem-alternatives>
+</sem-howto>
+<sem-howto>
+<name>Find helm config and kubeconfig per OS</name>
+<tags>helm env repositories.yaml kubeconfig xdg appdata</tags>
+<p>Goal: know which files helm reads for repositories, plugins, and the cluster connection — helm runs no service; these files are its entire OS footprint.</p>
+<sem-alternatives for="os">
+<sem-variant is="macos">
+<p>Run <sem-code>helm env</sem-code>: repositories live at <sem-code>~/Library/helm/repositories.yaml</sem-code> (helm honors macOS XDG defaults) with cache under the same root. Cluster access is the kubeconfig at <sem-code>~/.kube/config</sem-code>; override per command with <sem-code>--kube-context</sem-code>.</p>
+</sem-variant>
+<sem-variant is="linux">
+<p><sem-code>helm env</sem-code> reports XDG paths: <sem-code>~/.config/helm/repositories.yaml</sem-code> (honor <sem-code>XDG_CONFIG_HOME</sem-code> if set) and cache at <sem-code>~/.cache/helm/repository</sem-code>. Kubeconfig: <sem-code>~/.kube/config</sem-code> or <sem-code>KUBECONFIG</sem-code> when set.</p>
+</sem-variant>
+<sem-variant is="windows">
+<p>Helm stores under <sem-code>%APPDATA%\helm\</sem-code> — <sem-code>repositories.yaml</sem-code> and plugins live there; verify with <sem-code>helm env</sem-code>. Kubeconfig: <sem-code>%USERPROFILE%\.kube\config</sem-code>. PATH from the winget install already covers helm.exe; nothing to enable at boot.</p>
+</sem-variant>
+</sem-alternatives>
+</sem-howto>
+</sem-section>
+<sem-section>
+<h2>Helm 2 versus Helm 3</h2>
+<sem-variant for="tool.helm" is=">=3.0.0 <4.0.0">
+<p>Helm 3 model: no Tiller, no <sem-code>helm init</sem-code>. Releases are stored as secrets in the release namespace, RBAC comes straight from your kubeconfig, and <sem-code>helm upgrade --install</sem-code> is the one idempotent command for both first deploy and update.</p>
+</sem-variant>
+<sem-variant for="tool.helm" is="<3.0.0">
+<p>Legacy Helm 2: Tiller must be running server-side (<sem-code>helm init</sem-code>, often with <sem-code>--tiller-namespace</sem-code> in RBAC clusters) before any upgrade. Migrate to Helm 3 — the 2.x line is end-of-life and upgrade paths run through <sem-code>helm 2to3</sem-code>.</p>
+</sem-variant>
+<p sem-for="tool.helm" sem-is=">=3.2.0">Helm 3.2.0+ adds <sem-code>--take-ownership</sem-code> to upgrade: adopt resources that exist in-cluster but are missing the Helm release annotations instead of failing the release.</p>
+<p sem-for="tool.helm" sem-is=">=3.8.0">Helm 3.8.0+ enables OCI registries by default: pull or upgrade straight from <sem-code>oci://registry.example.com/charts/myapp</sem-code> with a version tag, after <sem-code>helm registry login</sem-code>.</p>
+</sem-section>
+<sem-section>
+<h2>Upgrade flag reference</h2>
+<sem-table>
+Flag | Meaning
+--install | Install the release if it does not exist, upgrade otherwise
+-f, --values FILE | Layer a values file (repeatable; later files win)
+--set key=val | Override a single value on the command line
+--reuse-values | Reuse the release's last values when upgrading
+--reset-values | Reset values to just what this command supplies
+--wait | Block until pods are ready or the timeout hits
+--atomic | Roll back automatically if the upgrade fails
+--take-ownership | Adopt unannotated existing resources (3.2.0+)
+-n, --namespace NS | Target namespace; pair with --create-namespace
+--kube-context NAME | Operate on a context other than the current one
+</sem-table>
+</sem-section>
+<sem-section audience="agent">
+<h2>Agent release runbook</h2>
+<sem-howto audience="agent">
+<name>Run an idempotent release and roll it back</name>
+<tags>helm upgrade install rollback history agent expected-output</tags>
+<p>Goal: deploy or update a chart release from a local chart directory, read the revision from output, and prove rollback works — exact commands and expected output.</p>
+<sem-procedure kind="runbook" audience="agent">
+<sem-step>Run <sem-code>helm version --template '{{.Version}}'</sem-code>. Expected: <sem-code>v3.16.1</sem-code> — a v3 semver, exit 0; v2 output means the legacy server-side flow applies instead.</sem-step>
+<sem-step>Run <sem-code>helm upgrade --install demo ./chart -n apps --create-namespace</sem-code>. Expected first run: <sem-code>Release "demo" does not exist. Installing it now.</sem-code> then a status block with <sem-code>NAME: demo</sem-code>, <sem-code>NAMESPACE: apps</sem-code>, <sem-code>STATUS: deployed</sem-code>, <sem-code>REVISION: 1</sem-code>; exit 0.</sem-step>
+<sem-step>Run the same command again after a chart change. Expected: <sem-code>Release "demo" has been upgraded.</sem-code> and the status block now shows <sem-code>REVISION: 2</sem-code>; exit 0.</sem-step>
+<sem-step>Run <sem-code>helm history demo -n apps</sem-code>. Expected: a table of revisions 1..N with STATUS deployed/failed; then <sem-code>helm rollback demo 1 -n apps</sem-code> returns the release to revision 1 (a new revision is created, it does not rewind time).</sem-step>
+</sem-procedure>
+</sem-howto>
+<p data-audience="agent">Failure mode: <sem-code>Error: UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress</sem-code> means a release never completed — inspect <sem-code>helm history demo -n apps</sem-code> and clear the pending one with <sem-code>helm rollback demo N -n apps</sem-code> before retrying.</p>
+</sem-section>
+<p>See also: <sem-reference cite="corpus/docker-build.sem.html">docker build</sem-reference> for building the images a chart references and <sem-reference cite="corpus/git.sem.html">git setup</sem-reference> for fetching chart sources.</p>
+</sem-enhanced-document>
+</body>
+</html>
