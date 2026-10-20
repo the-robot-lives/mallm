@@ -25,6 +25,10 @@ mallm init my-tool [--global]         # create a mallm.yaml stub (seeds from --h
 mallm list                            # list all known definitions
 mallm validate .mallm/my-tool.yaml    # validate a mallm.yaml
 mallm schema                          # print the JSON Schema
+mallm sources list|add|update         # how-to corpus sources (http | git | dir)
+mallm session <TOKEN>|clear           # session KV (4-glyph hieroglyph tokens)
+mallm history [--session <tok>] [--tail N]
+mallm doctor                          # env probe + source reachability + inference check
 make test                             # test suite
 ```
 
@@ -33,6 +37,7 @@ make test                             # test suite
 - **Resolution order**: project-local `.mallm/<app>.yaml` (nearest git root) → user config `~/.config/mallm/<app>/mallm.yaml` → native `<app> --mallm` (mallm-aware tools print their own YAML) → parse `<app> --help` into a basic stub.
 - **Schema** (`schemas/mallm.schema.json`): `summary`, `usage.examples`, typed `arguments`/`subcommands`, `environment`, `context` (when_to_use / when_not_to_use / common_patterns / gotchas), `skills`, `related`, `output`.
 - **`--mallm` protocol**: tools can natively answer `--mallm` with schema-valid YAML on stdout; optional — config files work without it.
+- **Platform config (v1.1)**: `.mallm/config.yaml` (project) → `~/.config/mallm/config.yaml` (user) → defaults — corpus `sources[]`, `inference`, `redaction.patterns[]`, `sessionTtl`; v1.0 definition files remain valid. Sessions live at `~/.local/share/mallm/sessions/`, the redacted history log at `~/.local/share/mallm/history.jsonl`, the corpus cache at `~/.cache/mallm/corpus/` (all XDG-overridable).
 - Worked examples live in `examples/` (`helm-upgrade.mallm.yaml`, `docker-build.mallm.yaml`); full docs in `docs/` (PROJ-ARCH/SCHEMA/HOWTO).
 
 ## Example

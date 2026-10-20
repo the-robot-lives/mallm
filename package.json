@@ -9,7 +9,9 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.tests.json",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "commander": "^13.1.0",
