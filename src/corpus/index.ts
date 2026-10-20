@@ -1,7 +1,7 @@
 import type { PlatformConfig } from "../config/types.js";
 import { cacheRoot as defaultCacheRoot } from "./cache.js";
 import type { FetchLike, RunGit, SyncResult } from "./adapters.js";
-import { syncSource } from "./adapters.js";
+import { syncSource, syncSourceCached } from "./adapters.js";
 import { mergeCorpus } from "./merge.js";
 import type { MergedDoc } from "./merge.js";
 
