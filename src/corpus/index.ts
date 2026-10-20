@@ -8,7 +8,7 @@ import type { MergedDoc } from "./merge.js";
 export type { CacheMeta } from "./cache.js";
 export { cacheRoot, cacheKeyFor, cacheEntryDir, readCacheMeta, writeCacheMeta, sha256Hex } from "./cache.js";
 export type { FetchLike, FetchLikeResponse, RunGit, SourceDoc, SyncResult } from "./adapters.js";
-export { syncSource, syncHttpSource, syncGitSource, syncDirSource, parseDocsPayload } from "./adapters.js";
+export { defaultRunGit, syncSource, syncHttpSource, syncGitSource, syncDirSource, parseDocsPayload } from "./adapters.js";
 export type { MergedDoc } from "./merge.js";
 export { mergeCorpus } from "./merge.js";
 

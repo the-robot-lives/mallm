@@ -108,7 +108,8 @@ function collectYamlDocs(dir: string, sourceName: string): SourceDoc[] {
     } catch {
       continue;
     }
-    const base = rel.replace(/\.(ya?ml)$/, "");
+    const base =
+      rel.split(sep).pop()?.replace(/\.(ya?ml)$/, "") ?? rel.replace(/\.(ya?ml)$/, "");
     if (Array.isArray(parsed)) {
       for (const item of parsed) {
         if (item && typeof item === "object" && !Array.isArray(item)) {

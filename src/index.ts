@@ -15,8 +15,8 @@ import {
   resolvePlatformConfig,
   upsertSource,
 } from "./config/index.js";
-import { cacheRoot, syncSource } from "./corpus/index.js";
-import { defaultRunGit, probeEnvironment } from "./env/index.js";
+import { cacheRoot, defaultRunGit, syncSource } from "./corpus/index.js";
+import { probeEnvironment } from "./env/index.js";
 import { SessionKV, listSessions, sessionsDir } from "./session/index.js";
 import { appendHistory, historyPath, readHistory } from "./changelog/index.js";
 import { redact } from "./changelog/redactor.js";

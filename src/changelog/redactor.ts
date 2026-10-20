@@ -109,7 +109,7 @@ function redactEnvAssignments(text: string, tracker: Tracker): string {
   });
 }
 
-function redactConfigPatterns(text: string, patterns: string[], tracker: Tracker): string {
+function redactConfigPatterns(text: string, patterns: readonly string[], tracker: Tracker): string {
   let out = text;
   for (const source of patterns) {
     let re: RegExp;
