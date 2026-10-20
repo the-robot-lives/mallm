@@ -1,7 +1,7 @@
 import type { PlatformConfig } from "../config/types.js";
 import { cacheRoot as defaultCacheRoot } from "./cache.js";
 import type { FetchLike, RunGit, SyncResult } from "./adapters.js";
-import { syncSource } from "./adapters.js";
+import { syncSource, syncSourceCached } from "./adapters.js";
 import { mergeCorpus } from "./merge.js";
 import type { MergedDoc } from "./merge.js";
 
@@ -9,6 +9,7 @@ export type { CacheMeta } from "./cache.js";
 export { cacheRoot, cacheKeyFor, cacheEntryDir, readCacheMeta, writeCacheMeta, sha256Hex } from "./cache.js";
 export type { FetchLike, FetchLikeResponse, RunGit, SourceDoc, SyncResult } from "./adapters.js";
 export { defaultRunGit, syncSource, syncHttpSource, syncGitSource, syncDirSource, parseDocsPayload } from "./adapters.js";
+export { syncSourceCached } from "./adapters.js";
 export type { MergedDoc } from "./merge.js";
 export { mergeCorpus } from "./merge.js";
 
@@ -26,5 +27,18 @@ export async function loadCorpus(
   const results = await Promise.all(
     config.sources.map((source) => syncSource(source, { cacheRoot: root, ...opts }))
   );
+  return { merged: mergeCorpus(results), results };
+}
+
+/**
+ * Load the corpus from the on-disk cache ONLY — no fetches, no git network.
+ * http/git sources never cached simply contribute no docs (ok:false).
+ */
+export async function loadCorpusFromCache(
+  config: PlatformConfig,
+  opts: { cacheRoot?: string } = {}
+): Promise<LoadCorpusResult> {
+  const root = opts.cacheRoot ?? defaultCacheRoot();
+  const results = config.sources.map((source) => syncSourceCached(source, { cacheRoot: root }));
   return { merged: mergeCorpus(results), results };
 }

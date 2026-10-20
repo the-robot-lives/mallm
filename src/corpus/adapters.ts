@@ -226,3 +226,47 @@ export async function syncSource(
       return syncDirSource(source);
   }
 }
+
+// --- cache-only variants (no network, no fetch; used by search/show defaults) ----
+
+export function syncHttpSourceCached(
+  source: MallmSource,
+  opts: { cacheRoot: string }
+): SyncResult {
+  const fail = (error: string): SyncResult => ({ source, ok: false, cached: false, docs: [], error });
+  if (source.kind !== "http" || !source.url) return fail("source is not http or has no url");
+  const dir = cacheEntryDir(opts.cacheRoot, source);
+  try {
+    const payload = readFileSync(join(dir, "payload"), "utf-8");
+    return { source, ok: true, cached: true, docs: parseDocsPayload(payload, source.name) };
+  } catch {
+    return fail("not cached yet (run `mallm sources update`)");
+  }
+}
+
+export function syncGitSourceCached(
+  source: MallmSource,
+  opts: { cacheRoot: string }
+): SyncResult {
+  const fail = (error: string): SyncResult => ({ source, ok: false, cached: false, docs: [], error });
+  if (source.kind !== "git" || !source.repo) return fail("source is not git or has no repo");
+  const dir = cacheEntryDir(opts.cacheRoot, source);
+  if (!existsSync(join(dir, ".git"))) {
+    return fail("not cached yet (run `mallm sources update`)");
+  }
+  return { source, ok: true, cached: true, docs: collectYamlDocs(dir, source.name) };
+}
+
+export function syncSourceCached(
+  source: MallmSource,
+  opts: { cacheRoot: string }
+): SyncResult {
+  switch (source.kind) {
+    case "http":
+      return syncHttpSourceCached(source, opts);
+    case "git":
+      return syncGitSourceCached(source, opts);
+    case "dir":
+      return syncDirSource(source);
+  }
+}

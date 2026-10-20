@@ -59,6 +59,15 @@ export function readKnowledge(path: string): Knowledge {
   }
 }
 
+/** Persist knowledge.yaml (sorted by topic id, matching upsertTopic's ordering). */
+export function writeKnowledge(path: string, knowledge: Knowledge): void {
+  const sorted: Knowledge = {
+    topics: [...knowledge.topics].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+  };
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, stringifyYaml(sorted, { lineWidth: 100 }));
+}
+
 export interface TopicUpdate {
   id: string;
   name?: string;

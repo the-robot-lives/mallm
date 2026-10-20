@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { Command } from "commander";
 import chalk from "chalk";
 import { parse as parseYaml } from "yaml";
 import { resolve_mallm, listAvailable } from "./resolver.js";
-import { formatMarkdown, formatJson } from "./formatter.js";
+import { formatMarkdown } from "./formatter.js";
 import { initMallm } from "./init.js";
 import {
   SOURCE_KINDS,
@@ -15,13 +16,23 @@ import {
   resolvePlatformConfig,
   upsertSource,
 } from "./config/index.js";
-import { cacheRoot, defaultRunGit, syncSource } from "./corpus/index.js";
-import { probeEnvironment } from "./env/index.js";
-import { SessionKV, listSessions, sessionsDir } from "./session/index.js";
+import { cacheRoot, defaultRunGit, loadCorpus, loadCorpusFromCache, syncSource } from "./corpus/index.js";
+import { osContext, probeEnvironment } from "./env/index.js";
+import { SessionKV, listSessions, mintUniqueToken, sessionFilePath, sessionsDir } from "./session/index.js";
 import { appendHistory, historyPath, readHistory } from "./changelog/index.js";
 import { redact } from "./changelog/redactor.js";
 import { isConfigured } from "./llm/index.js";
-import { resolveTiers, sortSources } from "./memory/index.js";
+import { readKnowledge, resolveTiers, sortSources, writeKnowledge } from "./memory/index.js";
+import { buildIndex, search } from "./search/index.js";
+import { howtoDocsFromCorpus } from "./search/corpus.js";
+import { advanceHowto } from "./howto/index.js";
+import { buildHowtoDeps, helpOrManText, renderHowtoStep } from "./howto/cli.js";
+import {
+  applyQuizAnswers,
+  askSystemOne,
+  buildQuiz,
+  renderQuizPlain,
+} from "./jev/index.js";
 
 const program = new Command();
 
@@ -32,11 +43,12 @@ program
 
 program
   .command("show <app>")
-  .description("Show mallm documentation for a command")
+  .description("Show mallm documentation for a command, folded with OS details, man/--help text, and the cached corpus entry")
   .option("--json", "Output as structured JSON instead of markdown")
   .option("--version <ver>", "Request documentation for a specific version")
-  .action((app: string, opts: { json?: boolean; version?: string }) => {
-    showApp(app, opts);
+  .option("--agent", "Append a SESSION <4 glyphs> suffix (reuses --session, else mints a fresh session)")
+  .action(async (app: string, opts: { json?: boolean; version?: string; agent?: boolean }) => {
+    await showApp(app, opts);
   });
 
 program
@@ -195,6 +207,7 @@ sourcesCmd
   .option("--branch <branch>", "git: branch to track (default main)")
   .option("--priority <priority>", "precedence (lower wins, default 100)", (v: string) => Number(v))
   .option("--creds-ref <ref>", "credential reference (a name, never a value)")
+  .option("--token-env <env>", "git: env var NAME holding the write-back push/PR token (never a value)")
   .action(
     (
       name: string,
@@ -205,6 +218,7 @@ sourcesCmd
         branch?: string;
         priority?: number;
         credsRef?: string;
+        tokenEnv?: string;
       }
     ) => {
       const kind = opts.kind as SourceKind;
@@ -232,6 +246,7 @@ sourcesCmd
         branch: opts.branch,
         priority: Number.isFinite(opts.priority) ? opts.priority : undefined,
         credsRef: opts.credsRef,
+        tokenEnv: opts.tokenEnv,
       };
       const target = firstWritableConfigPath();
       const { path, created } = upsertSource(target, source);
@@ -329,6 +344,49 @@ sessionCmd
     }
     console.log(`Removed ${removed} session${removed === 1 ? "" : "s"}.`);
     logCliAction("session.clear", [], `removed ${removed}`);
+  });
+
+function decideApproval(
+  token: string,
+  requestId: string,
+  decision: "granted" | "denied",
+  note?: string
+): void {
+  const kv = SessionKV.open(token);
+  if (!kv.existsOnDisk) {
+    console.error(chalk.red(`No session found for token '${token}'.`));
+    process.exit(1);
+  }
+  kv.set("approvals", requestId, {
+    decision,
+    at: new Date().toISOString(),
+    by: `session ${decision}`,
+    ...(note ? { note } : {}),
+  });
+  kv.save();
+  console.log(
+    `${decision === "granted" ? "Granted" : "Denied"} ${chalk.green(requestId)} in session ${chalk.green(token)}.`
+  );
+  if (decision === "granted") {
+    console.log(chalk.dim(`Resume with: mallm how-to --session ${token}`));
+  }
+  logCliAction(`session.${decision}`, [], `${requestId} in ${token}`);
+}
+
+sessionCmd
+  .command("approve <token> <requestId>")
+  .description("Grant a pending how-to gate approval request")
+  .option("--note <note>", "why (recorded in the approvals bucket)")
+  .action((token: string, requestId: string, opts: { note?: string }) => {
+    decideApproval(token, requestId, "granted", opts.note);
+  });
+
+sessionCmd
+  .command("deny <token> <requestId>")
+  .description("Deny a pending how-to gate approval request")
+  .option("--note <note>", "why (recorded in the approvals bucket)")
+  .action((token: string, requestId: string, opts: { note?: string }) => {
+    decideApproval(token, requestId, "denied", opts.note);
   });
 
 // --- history -------------------------------------------------------------------
@@ -500,6 +558,200 @@ program
     console.log(`  user:      ${report.paths.knowledgeTiers.user}`);
   });
 
+// --- how-to -----------------------------------------------------------------------
+
+const howtoCmd = program
+  .command("how-to")
+  .description("Resumable how-to state machine: INTAKE → DRAFT → SELECT → gates → SUCCESS → WRITEBACK (gates need explicit approvals; no --yes exists)");
+
+howtoCmd
+  .description("Run or resume a how-to (one-shot per call; state persists in the session KV)")
+  .argument("[goal]", "what the how-to should accomplish")
+  .option("--tool <tool>", "focus tool (corpus doc name used for write-back)")
+  .option("--dry-run", "stop after DRAFT/SELECT — never installs or runs anything")
+  .option("--pick <n>", "select candidate n (1-based) from the last DRAFT", (v: string) => Number(v))
+  .option("--approve-install", "grant the pending install gate for this invocation only")
+  .option("--approve-run", "grant the pending run gate for this invocation only")
+  .option("--json", "Output structured JSON")
+  .action(async (
+    goal: string | undefined,
+    opts: {
+      tool?: string;
+      dryRun?: boolean;
+      pick?: number;
+      approveInstall?: boolean;
+      approveRun?: boolean;
+      json?: boolean;
+    }
+  ) => {
+    const globalOpts = program.opts() as { session?: string; json?: boolean };
+    let token = globalOpts.session;
+    if (!token) {
+      if (!goal) {
+        howtoCmd.help();
+        return;
+      }
+      token = mintUniqueToken((t) => existsSync(sessionFilePath(t))).token;
+    }
+    const kv = SessionKV.open(token);
+    const deps = buildHowtoDeps({ kv });
+    try {
+      const result = await advanceHowto(deps, {
+        goal,
+        tool: opts.tool,
+        pick: opts.pick,
+        approveInstall: opts.approveInstall,
+        approveRun: opts.approveRun,
+        dryRun: opts.dryRun,
+      });
+      renderHowtoStep(result, { json: opts.json || globalOpts.json });
+      logCliAction("how-to", [], `${result.status} @ ${result.stage}`);
+      if (result.status === "stopped") process.exitCode = 2;
+    } catch (e) {
+      console.error(chalk.red(e instanceof Error ? e.message : String(e)));
+      process.exitCode = 1;
+    }
+  });
+
+// --- search -----------------------------------------------------------------------
+
+program
+  .command("search <query>")
+  .description("BM25 search over the how-to corpus (cache-only; --refresh re-syncs sources first)")
+  .option("--refresh", "sync sources (network) before searching")
+  .option("--json", "Output as JSON")
+  .action(async (query: string, opts: { refresh?: boolean; json?: boolean }) => {
+    const cfg = resolvePlatformConfig();
+    const root = cacheRoot();
+    const loaded = opts.refresh
+      ? await loadCorpus(cfg, { cacheRoot: root })
+      : await loadCorpusFromCache(cfg, { cacheRoot: root });
+    const docs = howtoDocsFromCorpus(loaded.merged);
+    const hits = search(buildIndex(docs), query, { limit: 10 });
+    const rows = hits.flatMap((h) => {
+      const doc = docs.find((d) => d.id === h.id);
+      return doc
+        ? [{
+            id: doc.id,
+            tool: doc.tool,
+            title: doc.title,
+            summary: doc.summary,
+            os: doc.os,
+            score: Math.round(h.score * 1000) / 1000,
+          }]
+        : [];
+    });
+    if (opts.json || (program.opts() as { json?: boolean }).json) {
+      console.log(JSON.stringify(rows, null, 2));
+      return;
+    }
+    if (rows.length === 0) {
+      console.log(chalk.dim(`No matches for '${query}'. Try --refresh, or 'mallm sources update'.`));
+      return;
+    }
+    for (const r of rows) {
+      console.log(
+        `  ${chalk.green(r.id)}  ${r.title}  ${chalk.dim(`(${r.tool}, score ${r.score})`)}`
+      );
+    }
+    logCliAction("search", [], `${rows.length} hits for '${query}'`);
+  });
+
+// --- quiz / learn (jev — TypeSafe systemone) -----------------------------------------
+
+function knowledgePath(): string {
+  const cfg = resolvePlatformConfig();
+  return join(resolveTiers(cfg).user, "knowledge.yaml");
+}
+
+async function corpusSynopses(): Promise<Record<string, string>> {
+  const synopses: Record<string, string> = {};
+  try {
+    const cfg = resolvePlatformConfig();
+    const { merged } = await loadCorpusFromCache(cfg, { cacheRoot: cacheRoot() });
+    for (const [name, m] of merged) {
+      const usage = m.doc.usage as Record<string, unknown> | undefined;
+      if (usage && typeof usage.synopsis === "string" && usage.synopsis.trim() !== "") {
+        synopses[name] = usage.synopsis;
+      }
+    }
+  } catch {
+    // synopses are optional context for choice questions
+  }
+  return synopses;
+}
+
+program
+  .command("quiz")
+  .description("Plain-text quiz from knowledge.yaml topics (lowest confidence first)")
+  .option("--topic <id>", "quiz a single topic id")
+  .option("--json", "Output as JSON")
+  .action(async (opts: { topic?: string; json?: boolean }) => {
+    const topics = readKnowledge(knowledgePath()).topics;
+    if (topics.length === 0) {
+      console.log(
+        chalk.dim(
+          "No knowledge topics yet — they appear as how-to runs complete (write-back) or are hand-authored in knowledge.yaml."
+        )
+      );
+      return;
+    }
+    const round = buildQuiz(topics, { topicId: opts.topic, synopses: await corpusSynopses() });
+    if (opts.json || (program.opts() as { json?: boolean }).json) {
+      console.log(JSON.stringify(round, null, 2));
+      return;
+    }
+    console.log(renderQuizPlain(round));
+  });
+
+program
+  .command("learn")
+  .description("Run a jev (TypeSafe systemone) quiz round and apply the answers to knowledge.yaml")
+  .option("--topic <id>", "limit the round to one topic id")
+  .option("--limit <n>", "max topics probed", (v: string) => Number(v))
+  .option("--json", "Output as JSON")
+  .action(async (opts: { topic?: string; limit?: number; json?: boolean }) => {
+    const path = knowledgePath();
+    const topics = readKnowledge(path).topics;
+    if (topics.length === 0) {
+      console.log(chalk.dim("No knowledge topics to learn from yet."));
+      return;
+    }
+    const round = buildQuiz(topics, {
+      topicId: opts.topic,
+      limit: opts.limit,
+      synopses: await corpusSynopses(),
+    });
+    const state = {
+      os: osContext(),
+      tools: topics.map((t) => t.id),
+      corpus: Object.keys(await corpusSynopses()),
+    };
+    const result = await askSystemOne(state, round.questions, { env: process.env });
+    const asJson = opts.json || (program.opts() as { json?: boolean }).json;
+    if (!result.ok) {
+      if (asJson) {
+        console.log(JSON.stringify({ ok: false, kind: result.kind, reason: result.reason, round }, null, 2));
+      } else {
+        console.log(chalk.yellow(`${result.reason} — rendering the quiz instead:`));
+        console.log(renderQuizPlain(round));
+      }
+      return;
+    }
+    const applied = applyQuizAnswers(topics, round.questions, result.answers, round.expected);
+    writeKnowledge(path, { topics: applied.topics });
+    if (asJson) {
+      console.log(JSON.stringify({ ok: true, answers: result.answers, deltas: applied.deltas }, null, 2));
+    } else {
+      console.log(`jev round complete (${result.answers.length} answers applied):`);
+      for (const d of applied.deltas) {
+        console.log(`  ${chalk.green(d.topicId)}  ${d.from} → ${d.to}`);
+      }
+      if (applied.deltas.length === 0) console.log(chalk.dim("  (no confidence changes)"));
+    }
+    logCliAction("learn", [path], `${result.answers.length} answers, ${applied.deltas.length} deltas`);
+  });
+
 // --- global flags + default action ----------------------------------------------
 
 function logCliAction(action: string, files: string[], outcome: string): void {
@@ -530,7 +782,11 @@ program.hook("preAction", () => {
   }
 });
 
-function showApp(app: string, opts?: { json?: boolean; version?: string }) {
+async function showApp(
+  app: string,
+  opts?: { json?: boolean; version?: string; agent?: boolean }
+) {
+  const globalOpts = program.opts() as { session?: string; json?: boolean };
   const resolved = resolve_mallm(app, { version: opts?.version });
 
   if (!resolved) {
@@ -543,22 +799,92 @@ function showApp(app: string, opts?: { json?: boolean; version?: string }) {
     process.exit(1);
   }
 
-  if (opts?.json) {
-    console.log(formatJson(resolved));
-  } else {
-    console.log(formatMarkdown(resolved));
+  const os = osContext();
+  const helpText = await helpOrManText(app);
+  let corpusEntry: {
+    name: string;
+    source: string;
+    kind: string;
+    priority: number;
+    summary: string | null;
+  } | null = null;
+  try {
+    const cfg = resolvePlatformConfig();
+    const { merged } = await loadCorpusFromCache(cfg, { cacheRoot: cacheRoot() });
+    const doc = merged.get(app);
+    if (doc) {
+      corpusEntry = {
+        name: doc.name,
+        source: doc.sourceName,
+        kind: doc.sourceKind,
+        priority: doc.priority,
+        summary: typeof doc.doc.summary === "string" ? doc.doc.summary : null,
+      };
+    }
+  } catch {
+    // corpus fold is best-effort
+  }
+
+  let token: string | null = null;
+  if (opts?.agent) {
+    const given = globalOpts.session;
+    token = given && existsSync(sessionFilePath(given)) ? given : null;
+    if (!token) {
+      token = mintUniqueToken((t) => existsSync(sessionFilePath(t))).token;
+      SessionKV.open(token).save();
+    }
+  }
+
+  if (opts?.json || globalOpts.json) {
+    console.log(
+      JSON.stringify(
+        {
+          doc: resolved.config,
+          docSource: resolved.source,
+          docPath: resolved.path,
+          os,
+          help: helpText === "" ? null : helpText,
+          corpus: corpusEntry,
+          session: token,
+        },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
+  console.log(formatMarkdown(resolved));
+  console.log(chalk.bold("## OS"));
+  console.log(`  ${os.flavor} ${os.version} · ${os.arch} · ${os.shell}`);
+  if (helpText !== "") {
+    console.log("");
+    console.log(chalk.bold("## Help (man/--help fold)"));
+    console.log(chalk.dim(helpText.replace(/^/gm, "  ")));
+  }
+  if (corpusEntry) {
+    console.log("");
+    console.log(chalk.bold("## Corpus (cached)"));
+    console.log(
+      `  ${chalk.green(corpusEntry.name)} (${corpusEntry.kind}, p${corpusEntry.priority}, source ${corpusEntry.source})`
+    );
+    if (corpusEntry.summary) console.log(chalk.dim(`  ${corpusEntry.summary}`));
+  }
+  if (token) {
+    console.log("");
+    console.log(`SESSION ${chalk.green(token)}`);
   }
 }
 
 // Default: `mallm <app>` as shorthand for `mallm show <app>`
 program.argument("[app]", "Command to look up (shorthand for 'mallm show <app>')");
 program.option("--json", "Output as structured JSON");
-program.action((app?: string, opts?: { json?: boolean }) => {
+program.action(async (app?: string, opts?: { json?: boolean }) => {
   if (!app) {
     program.help();
     return;
   }
-  showApp(app, opts);
+  await showApp(app, opts);
 });
 
 program.parse();

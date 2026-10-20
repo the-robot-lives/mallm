@@ -4,6 +4,25 @@
 - Docs: `PROJ-ARCH.md` gained an "Ecosystem Fit" section (standalone Node package, decoupled from `k8-lib`/`.infra-config.yaml`; npm-link install) and a note that `mallm validate` is a lightweight required-field check while `schemas/mallm.schema.json` remains the canonical spec
 - Docs: `PROJ-LAYOUT.md` and both `.summary.md` quick references updated to reflect the full docs set and Makefile hook stubs
 
+## [semtext-howto] — 2026-10-21
+Wave 2 of the SemText how-to platform: the resumable how-to state machine, the jev (TypeSafe systemone) client, gated script execution with strict redaction, and corpus write-back.
+
+### Added
+- `src/howto/` — resumable state machine (state in the session KV `howto` bucket; one CLI invocation = one advance): INTAKE (env probe + corpus + memory tiers) → DRAFT (2–3 candidate bash scripts via `llm/` when configured, corpus-adapted BM25 otherwise, template fallback — every path degrades, never throws) → SELECT → GATE_INSTALL (installs only with explicit approval; plan-hash-scoped approval id) → GATE_RUN (per-attempt approval id, output redacted STRICTLY pre-persist) → OBSERVE → DIAGNOSE+PATCH (LLM patch or candidate rotation) → back to GATE_RUN (max 3 attempts, then stopped) → SUCCESS → WRITEBACK → CLOSE. NO `--yes` bypass exists; approvals arrive via `mallm session approve|deny <token> <requestId>` or the narrow `--approve-install`/`--approve-run` flags for a single invocation
+- `src/jev/` — TypeSafe systemone client: `POST {JEV_BASE_URL|https://api.typesafe.ai/v1}/systemone` with `{model:"jev-latest", state, questions}`, bearer key from `JEV_API_KEY`/`TYPESAFE_API_KEY` (env names only in errors); typed no-key/error degrade matching `llm/`; quiz building from knowledge.yaml topics (lowest-confidence first; boolean/score/choice with corpus-synopsis distractors) and answer application (boolean ±2, score sets, choice ±1, clamped 0–10)
+- Write-back (D4) — finalized how-to appended as a `howtos:` entry to the corpus source doc: `dir` adapter = local commit on `howto/<session-token>`; `git` adapter = branch off the source's tracked branch + push + PR via gh. Push tokens travel via an env-injected git credential helper referencing the env var NAME (`sources[].tokenEnv` — never a value, never in argv/URLs); gh reads `GH_TOKEN` from env
+- CLI: `how-to [goal] [--tool --dry-run --pick N --approve-install --approve-run --json]`, `search <query> [--refresh --json]` (BM25 over doc-level + howtos-section corpus entries), `quiz [--topic --json]` (plain-text rendering; SemText view-as=quiz lands wave 2b), `learn [--topic --limit --json]` (jev round applied to knowledge.yaml, degrades to quiz rendering), `show <app> [--agent --json]` now folds cached corpus entry + man/--help text + OS context and appends `SESSION <glyphs>` (reuses `--session` when live), `session approve|deny <token> <requestId> [--note]`, `sources add --token-env <env>`
+- `src/search/corpus.ts` — corpus → BM25 doc mapping (one entry per corpus doc + one per `howtos[]` section)
+- Tests (`tests/howto-machine.test.ts`, `tests/howto-drafts.test.ts`, `tests/jev.test.ts`, `tests/writeback.test.ts`): state-machine golden path + gate refusal (approval flags REQUIRED — zero runs without them) + 3-loop cap with per-attempt approvals + resumability across fresh instances, draft generation via mocked ChatFetch, jev client via mocked fetch, write-back via mocked git/gh asserting the token never reaches argv, GATE_RUN redaction proven on FAKE secrets in both state and the on-disk session file
+
+### Changed
+- `src/session/kv.ts` — new `howto` bucket (appended last; existing buckets unchanged)
+- `src/env/` — light `osContext()` probe (OS flavor/version, arch, shell) without the PATH scan, for read paths
+- `src/memory/knowledge.ts` — `writeKnowledge()` (sorted, lineWidth 100) for the learn/write-back paths
+- `src/config/` — `sources[].tokenEnv` (env var NAME for write-back auth) accepted by the loader, CLI, and schema
+- `src/corpus/` — cache-only sync/load helpers (`syncSourceCached`, `loadCorpusFromCache`) so `search` and `show` default to no network
+- `.gitignore` — `.claude/worktrees/` (canonical worktree placement, per monorepo convention)
+
 ## [semtext-foundation] — 2026-10-21
 Foundation wave of the SemText-powered how-to platform: config, corpus, env probe, sessions, redacting history, inference client, BM25 search, memory tiers.
 
