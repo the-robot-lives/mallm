@@ -9,7 +9,59 @@
     "mallm": {
       "type": "string",
       "description": "Schema version",
-      "enum": ["1.0"]
+      "enum": ["1.0", "1.1"]
+    },
+    "sources": {
+      "type": "array",
+      "description": "How-to corpus sources (v1.1); merged in priority order (lower number = higher precedence). Optional — v1.0 files without it stay valid.",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "properties": {
+          "name": { "type": "string", "description": "Unique source name" },
+          "kind": { "type": "string", "enum": ["http", "git", "dir"] },
+          "url": {
+            "type": "string",
+            "description": "http: URL to fetch; dir: local directory path"
+          },
+          "repo": { "type": "string", "description": "git: repository URL" },
+          "branch": { "type": "string", "description": "git: branch to track" },
+          "priority": {
+            "type": "number",
+            "description": "Precedence (lower wins)",
+            "default": 100
+          },
+          "credsRef": {
+            "type": "string",
+            "description": "Credential reference (a name, never a value)"
+          }
+        }
+      }
+    },
+    "inference": {
+      "type": "object",
+      "description": "OpenAI-compatible inference settings (v1.1); unconfigured consumers must degrade gracefully",
+      "properties": {
+        "baseUrl": { "type": "string", "description": "Base URL of the chat endpoint" },
+        "apiKeyEnv": { "type": "string", "description": "Env var holding the API key (name, not value)" },
+        "model": { "type": "string" }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "description": "Extra redaction patterns (v1.1) applied by the pre-write redactor",
+      "properties": {
+        "patterns": {
+          "type": "array",
+          "items": { "type": "string", "description": "Regex source string" }
+        }
+      }
+    },
+    "sessionTtl": {
+      "type": "integer",
+      "description": "Session TTL in seconds (v1.1)",
+      "minimum": 1,
+      "default": 86400
     },
     "name": {
       "type": "string",
