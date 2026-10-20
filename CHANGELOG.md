@@ -22,6 +22,7 @@ Wave 2 of the SemText how-to platform: the resumable how-to state machine, the j
 - `src/config/` — `sources[].tokenEnv` (env var NAME for write-back auth) accepted by the loader, CLI, and schema
 - `src/corpus/` — cache-only sync/load helpers (`syncSourceCached`, `loadCorpusFromCache`) so `search` and `show` default to no network
 - `.gitignore` — `.claude/worktrees/` (canonical worktree placement, per monorepo convention)
+- manifests branch seeded: tools registry + git/docker-build/helm-upgrade v0.8 seeds
 
 ## [semtext-foundation] — 2026-10-21
 Foundation wave of the SemText-powered how-to platform: config, corpus, env probe, sessions, redacting history, inference client, BM25 search, memory tiers.
