@@ -1,5 +1,8 @@
 # Changelog — mallm
 
+## 2026-10-28
+- docs: add AGENT-README.md (agent orientation)
+
 ## [Unreleased]
 - Docs: `PROJ-ARCH.md` gained an "Ecosystem Fit" section (standalone Node package, decoupled from `k8-lib`/`.infra-config.yaml`; npm-link install) and a note that `mallm validate` is a lightweight required-field check while `schemas/mallm.schema.json` remains the canonical spec
 - Docs: `PROJ-LAYOUT.md` and both `.summary.md` quick references updated to reflect the full docs set and Makefile hook stubs
