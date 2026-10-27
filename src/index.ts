@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// 〚📁:d85e1943-249f-50cf-bd06-cfdb09e564e6〛 mallm CLI entry :: Commander CLI entry — all commands and global flags
+
 
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";

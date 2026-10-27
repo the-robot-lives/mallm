@@ -1,6 +1,6 @@
 import type { MallmConfig, ResolvedMallm } from "./schema.js";
 
-// <REMOVED UUID HERE> formatMarkdown :: auto-generated pointer for public function formatMarkdown
+// 〚🔧:d2123193-ff36-5046-b63f-558fd840b9f6〛 formatMarkdown :: Renders a resolved mallm doc as Markdown
 export function formatMarkdown(resolved: ResolvedMallm): string {
   const { config: c, source } = resolved;
   const lines: string[] = [];
@@ -204,7 +204,7 @@ export function formatMarkdown(resolved: ResolvedMallm): string {
   return lines.join("\n");
 }
 
-// <REMOVED UUID HERE> formatJson :: auto-generated pointer for public function formatJson
+// 〚🔧:cc05d67d-6486-5801-bb8c-6faf82e0501e〛 formatJson :: Renders a resolved mallm doc as JSON with _meta provenance
 export function formatJson(resolved: ResolvedMallm): string {
   return JSON.stringify(
     {

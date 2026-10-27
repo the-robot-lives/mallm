@@ -6,7 +6,7 @@ import { stringify } from "yaml";
 import { parseHelp } from "./help-parser.js";
 import type { MallmConfig } from "./schema.js";
 
-// <REMOVED UUID HERE> initMallm :: auto-generated pointer for public function initMallm
+// 〚🔧:ac9a4a2a-3f12-559e-bd4f-f48e0242e743〛 initMallm :: Scaffolds a mallm.yaml stub, seeding from --help
 export function initMallm(
   app: string,
   options: { global?: boolean; project?: boolean }
