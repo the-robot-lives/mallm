@@ -1,5 +1,7 @@
 # mallm
 
+<!-- 〚📁:af4b66c6-fdcd-5b96-a758-8bb7bb6b2d29〛 mallm README :: Overview, usage, resolution order, schema reference -->
+
 **Repo:** https://github.com/the-robot-lives/mallm
 
 `man` pages for LLM agents — structured, LLM-friendly documentation for CLI tools.

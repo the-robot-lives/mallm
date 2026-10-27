@@ -84,7 +84,7 @@ function tryHelpFallback(app: string): ResolvedMallm | null {
   }
 }
 
-// <REMOVED UUID HERE> resolve_mallm :: auto-generated pointer for public function resolve_mallm
+// 〚🔧:798778f3-031a-576f-a126-e5b211332932〛 resolve_mallm :: Resolves mallm docs through the 4-tier chain
 export function resolve_mallm(
   app: string,
   options?: { version?: string }
@@ -97,7 +97,7 @@ export function resolve_mallm(
   );
 }
 
-// <REMOVED UUID HERE> listAvailable :: auto-generated pointer for public function listAvailable
+// 〚🔧:57876bf9-d451-59f7-b8e3-f05ec207f600〛 listAvailable :: Lists discoverable mallm definitions by source tier
 export function listAvailable(): Array<{ name: string; source: string; path: string }> {
   const results: Array<{ name: string; source: string; path: string }> = [];
 

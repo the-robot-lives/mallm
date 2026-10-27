@@ -1,6 +1,6 @@
 import type { MallmConfig } from "./schema.js";
 
-// <REMOVED UUID HERE> parseHelp :: auto-generated pointer for public function parseHelp
+// 〚🔧:8cf6c4c6-f0b5-5c06-9364-d3046f827eaa〛 parseHelp :: Parses --help text into a mallm structure
 export function parseHelp(app: string, helpText: string): MallmConfig {
   const lines = helpText.split("\n");
   const summary = extractSummary(lines);

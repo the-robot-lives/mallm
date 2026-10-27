@@ -1,3 +1,5 @@
+// 〚📦:e52ebd48-1a4d-53b5-b3ef-47a2d0bafbcf〛 SessionKV :: File-backed session key/value store (buckets)
+
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";

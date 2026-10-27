@@ -1,0 +1,122 @@
+---
+pointers:
+  57876bf9-d451-59f7-b8e3-f05ec207f600:
+    created_at: 2026-10-27T03:32:28.322729Z
+    description: Lists discoverable mallm definitions by source tier
+    file_path: src/resolver.ts
+    function: listAvailable
+    kind: function
+    line: 100
+    locations:
+      - file_path: src/resolver.ts
+        line: 100
+    token: 𔕂𓹚𓷥𔃠
+    updated_at: 2026-10-27T03:32:28.322729Z
+  798778f3-031a-576f-a126-e5b211332932:
+    created_at: 2026-10-27T03:32:28.322719Z
+    description: Resolves mallm docs through the 4-tier chain
+    file_path: src/resolver.ts
+    function: resolve_mallm
+    kind: function
+    line: 87
+    locations:
+      - file_path: src/resolver.ts
+        line: 87
+    token: 𓡯𓿘𓀨𓆒
+    updated_at: 2026-10-27T03:32:28.322719Z
+  8655c684-30b8-5143-8f20-9aa15ebfa254:
+    created_at: 2026-10-27T03:32:28.322715Z
+    description: Resumable, approval-gated how-to pipeline
+    file_path: src/howto/machine.ts
+    function: mallm how-to state machine
+    kind: file
+    line: 1
+    locations:
+      - file_path: src/howto/machine.ts
+        line: 1
+    token: 𓟕𓺳𔄜𓇴
+    updated_at: 2026-10-27T03:32:28.322715Z
+  8cf6c4c6-f0b5-5c06-9364-d3046f827eaa:
+    created_at: 2026-10-27T03:32:28.322702Z
+    description: Parses --help text into a mallm structure
+    file_path: src/help-parser.ts
+    function: parseHelp
+    kind: function
+    line: 3
+    locations:
+      - file_path: src/help-parser.ts
+        line: 3
+    token: 𓒎𔅕𔗱𓄚
+    updated_at: 2026-10-27T03:32:28.322702Z
+  ac9a4a2a-3f12-559e-bd4f-f48e0242e743:
+    created_at: 2026-10-27T03:32:28.322684Z
+    description: Scaffolds a mallm.yaml stub, seeding from --help
+    file_path: src/init.ts
+    function: initMallm
+    kind: function
+    line: 9
+    locations:
+      - file_path: src/init.ts
+        line: 9
+    token: 𓀦𓘮𓜦𓮳
+    updated_at: 2026-10-27T03:32:28.322684Z
+  af4b66c6-fdcd-5b96-a758-8bb7bb6b2d29:
+    created_at: 2026-10-27T03:32:28.322698Z
+    description: Overview, usage, resolution order, schema reference
+    file_path: README.md
+    function: mallm README
+    kind: file
+    line: 3
+    locations:
+      - file_path: README.md
+        line: 3
+    token: 𓊘𓫄𓕠𓘹
+    updated_at: 2026-10-27T03:32:28.322698Z
+  cc05d67d-6486-5801-bb8c-6faf82e0501e:
+    created_at: 2026-10-27T03:32:28.322706Z
+    description: Renders a resolved mallm doc as JSON with _meta provenance
+    file_path: src/formatter.ts
+    function: formatJson
+    kind: function
+    line: 207
+    locations:
+      - file_path: src/formatter.ts
+        line: 207
+    token: 𓒢𔘏𓪓𓗞
+    updated_at: 2026-10-27T03:32:28.322706Z
+  d2123193-ff36-5046-b63f-558fd840b9f6:
+    created_at: 2026-10-27T03:32:28.322733Z
+    description: Renders a resolved mallm doc as Markdown
+    file_path: src/formatter.ts
+    function: formatMarkdown
+    kind: function
+    line: 3
+    locations:
+      - file_path: src/formatter.ts
+        line: 3
+    token: 𔖼𓬆𔔁𓒖
+    updated_at: 2026-10-27T03:32:28.322733Z
+  d85e1943-249f-50cf-bd06-cfdb09e564e6:
+    created_at: 2026-10-27T03:32:28.322722Z
+    description: Commander CLI entry — all commands and global flags
+    file_path: src/index.ts
+    function: mallm CLI entry
+    kind: file
+    line: 2
+    locations:
+      - file_path: src/index.ts
+        line: 2
+    token: 𓻎𔘡𔎞𓆦
+    updated_at: 2026-10-27T03:32:28.322722Z
+  e52ebd48-1a4d-53b5-b3ef-47a2d0bafbcf:
+    created_at: 2026-10-27T03:32:28.322726Z
+    description: File-backed session key/value store (buckets)
+    file_path: src/session/kv.ts
+    function: SessionKV
+    kind: module
+    line: 1
+    locations:
+      - file_path: src/session/kv.ts
+        line: 1
+    token: 𓿝𓈁𓮁𓌿
+    updated_at: 2026-10-27T03:32:28.322726Z

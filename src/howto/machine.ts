@@ -1,3 +1,5 @@
+// 〚📁:8655c684-30b8-5143-8f20-9aa15ebfa254〛 mallm how-to state machine :: Resumable, approval-gated how-to pipeline
+
 import { sha256Hex } from "../corpus/index.js";
 import type { EnvironmentProbe } from "../env/index.js";
 import type { MergedDoc } from "../corpus/index.js";
