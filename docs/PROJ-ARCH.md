@@ -2,90 +2,151 @@
 
 ## Overview
 
-`mallm` is a CLI tool that provides structured, LLM-friendly documentation for command-line tools. It resolves documentation from multiple sources via a priority chain, formats it for human or machine consumption, and can bootstrap documentation stubs by parsing `--help` output.
+`mallm` is a CLI that provides structured, LLM-friendly documentation for command-line tools and
+an executable how-to pipeline on top of it. It resolves documentation from several sources via a
+priority chain, folds in OS/env context, machine-readable help text and a cached how-to corpus, and
+emits Markdown or JSON for agents and humans. Since the SemText waves it also runs a resumable,
+approval-gated pipeline that drafts bash scripts, installs missing tools, executes the script, and
+writes the validated how-to back to a corpus source.
 
-The codebase is a single-process Node.js CLI (~800 lines of TypeScript) with no runtime services, no persistence layer, and no network calls beyond shelling out to target tools.
+The codebase is a single-process Node.js CLI (~6k lines of TypeScript) with **no server, no
+listener, and no database**. It does have local file-backed state (sessions, history, knowledge,
+corpus cache) under XDG dirs and makes outbound network calls only on explicit user action: corpus
+source sync, LLM inference, the Jev (TypeSafe systemone) client, and write-back push/PR.
 
 ## System Diagram
 
 ```mermaid
 graph LR
-    CLI[CLI Entry<br/>index.ts] --> R[Resolver<br/>resolver.ts]
-    CLI --> I[Init<br/>init.ts]
-    CLI --> F[Formatter<br/>formatter.ts]
+    CLI["CLI entry<br/>index.ts"] --> R["Resolver<br/>resolver.ts"]
+    CLI --> HT["How-to machine<br/>howto/machine.ts"]
+    CLI --> SR["Search / quiz"]
 
-    R -->|1| PL[".mallm/<app>.yaml<br/>(project-local)"]
-    R -->|2| UC["~/.config/mallm/<app>/<br/>(user-config)"]
-    R -->|3| N["app --mallm<br/>(native protocol)"]
-    R -->|4| HF["app --help<br/>(fallback)"]
+    R -->|1| PL[".mallm/&lt;app&gt;.yaml"]
+    R -->|2| UC["~/.config/mallm/"]
+    R -->|3| N["app --mallm"]
+    R -->|4| HF["app --help"]
+    HF --> HP["help-parser.ts"]
 
-    HF --> HP[Help Parser<br/>help-parser.ts]
-    I --> HP
+    HT --> CFG["config/"]
+    HT --> ENV["env/probe.ts"]
+    HT --> COR["corpus/"]
+    HT --> KV["session/kv.ts"]
+    HT --> LLM["llm/client.ts"]
+    HT --> JEV["jev/client.ts"]
+    HT --> WB["howto/writeback.ts"]
 
-    F -->|markdown| STDOUT[stdout]
-    F -->|json| STDOUT
+    COR -->|http/git/dir| EXT[("Corpus sources")]
+    LLM -->|bearer| LLME[("Inference endpoint")]
+    JEV -->|bearer| JEVAPI[("api.typesafe.ai")]
+    WB -->|token env| GH[("git remote / gh")]
 
-    S[Schema<br/>schema.ts] -.->|types| R
-    S -.->|types| F
-    S -.->|types| HP
+    KV --> ST[("XDG data<br/>sessions, history")]
+    COR --> CA[("XDG cache<br/>corpus")]
+    CLI --> HIST["changelog/redactor.ts<br/>(strict pre-write)"]
 ```
 
 ## Core Components
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| CLI | `src/index.ts` | Commander-based entry point; commands: `show`, `init`, `list`, `validate`, `schema` |
-| Resolver | `src/resolver.ts` | 4-tier resolution chain returning the first match |
-| Formatter | `src/formatter.ts` | Renders `MallmConfig` as markdown (section-aware) or JSON (with `_meta`) |
-| Help Parser | `src/help-parser.ts` | Extracts summary, arguments, and subcommands from `--help` text |
-| Init | `src/init.ts` | Scaffolds `mallm.yaml` stubs; seeds from `--help` when available |
-| Schema | `src/schema.ts` | TypeScript interfaces (`MallmConfig`, `ResolvedMallm`, `MallmArgument`) |
-| JSON Schema | `schemas/mallm.schema.json` | Canonical schema for `mallm.yaml` validation |
+| Component | Directory | Purpose |
+|-----------|-----------|---------|
+| CLI | `src/index.ts` | Commander entry; all commands and global flags |
+| Resolver | `src/resolver.ts` | 4-tier mallm.yaml resolution | 
+| Formatter | `src/formatter.ts` | Markdown render / JSON with `_meta` provenance |
+| Help parser | `src/help-parser.ts`, `src/init.ts` | `--help` → mallm structure; stub scaffolding |
+| Schema | `src/schema.ts`, `schemas/` | TypeScript types + canonical JSON Schema |
+| Platform config | `src/config/` | `.mallm/config.yaml` → `~/.config/mallm/config.yaml` → defaults (v1.1) |
+| Corpus | `src/corpus/` | http/git/dir adapters, ETag + commit caching, priority merge |
+| Env probe | `src/env/` | OS/arch/shell, PATH tool scan, installer detection |
+| Session | `src/session/` | 4-glyph tokens + file-backed `SessionKV` buckets |
+| History | `src/changelog/` | append-only redacted `history.jsonl` |
+| Inference | `src/llm/` | Minimal OpenAI-compatible chat; typed no-inference degrade |
+| Jev | `src/jev/` | TypeSafe systemone quiz client + answer application |
+| Memory | `src/memory/` | Tier resolution (universal/org/project/user) + `knowledge.yaml` |
+| Search | `src/search/` | Hand-rolled BM25 over corpus docs and `howtos[]` entries |
+| How-to | `src/howto/` | Resumable state machine, drafts, script planning, write-back |
 
 → *Components ↔ directories: see [PROJ-LAYOUT.md](PROJ-LAYOUT.md)*
 
 ## Resolution Chain
 
-The resolver (`resolve_mallm`) tries four sources in order, returning the first hit:
+`resolve_mallm` tries four sources in order, returning the first hit:
 
-1. **Project-local** — `.mallm/<app>.yaml` in the nearest git root or `.mallm/` ancestor
-2. **User config** — `~/.config/mallm/<app>/mallm.yaml` (supports `<version>/mallm.yaml` and `latest/`)
+1. **Project-local** — `.mallm/<app>.yaml` at the nearest `.mallm/` or `.git/` ancestor
+2. **User config** — `~/.config/mallm/<app>/mallm.yaml` (`<version>/` and `latest/` variants probed)
 3. **Native protocol** — executes `<app> --mallm`, expects YAML on stdout
-4. **Help fallback** — parses `<app> --help` output into a basic `MallmConfig` via `help-parser.ts`
+4. **Help fallback** — parses `<app> --help` into a basic `MallmConfig`
 
-Each result carries a `source` tag (`project-local`, `user-config`, `native`, `help-generated`) and optional `path`, which the formatter includes as provenance metadata.
+Each result carries a `source` tag (`project-local`, `user-config`, `native`, `help-generated`) and
+optional `path`, surfaced by the formatter as provenance (`_meta` in JSON).
 
-## Data Model
+## Platform Config (v1.1)
 
-`MallmConfig` is the central type. Key sections:
+Configuration layers on top of the resolver chain: project `.mallm/config.yaml` overrides user
+`~/.config/mallm/config.yaml`, over defaults. Keys: `sources[]` (http|git|dir with `url`/`repo`+
+`branch`/`priority`/`credsRef`/`tokenEnv`), `inference{baseUrl,apiKeyEnv,model}`,
+`redaction.patterns[]`, `sessionTtl`. v1.0 definitions remain valid — every accessor fills defaults.
 
-| Section | Content |
-|---------|---------|
-| `summary` / `description` | Human-readable identity |
-| `usage.examples` | Concrete command + description + optional output |
-| `arguments` | Typed args: `flag`, `option`, `positional`, `variadic` |
-| `subcommands` | Nested commands with own args and examples |
-| `environment` | Required/optional env vars |
-| `context` | LLM guidance: `when_to_use`, `when_not_to_use`, `common_patterns`, `gotchas` |
-| `output` | stdout/stderr semantics, exit codes, format list |
-| `skills` / `related` | Cross-references to extended docs and related commands |
+## How-to Pipeline
+
+`mallm how-to` is a resumable state machine; one CLI invocation loads state from the session KV,
+advances as far as the recorded approvals allow, and persists. Stages: INTAKE (env probe + corpus +
+memory tiers) → DRAFT (2–3 candidate bash scripts via `llm/` when configured, corpus/BM25 otherwise,
+template fallback) → SELECT → GATE_INSTALL → GATE_RUN → OBSERVE → DIAGNOSE+PATCH (≤3 attempts) →
+SUCCESS → WRITEBACK → CLOSE.
+
+Gate discipline: **there is no `--yes`.** Approval ids are plan-hash-scoped (install) or
+per-attempt (run); decisions land in the session `approvals` bucket via
+`mallm session approve|deny <token> <id>` or the single-invocation `--approve-install` /
+`--approve-run` flags. Script output is redacted **strictly before** it is persisted; write-back
+appends a `howtos:` entry to the corpus source doc (dir = local commit, git = branch + push + PR).
+
+→ *Details: [PROJ-HOWTO.md](PROJ-HOWTO.md)*
+
+## Local State
+
+Everything mallm writes is local, under XDG-overridable paths:
+
+| State | Path | Shape |
+|-------|------|-------|
+| Session KV | `$XDG_DATA_HOME/mallm/sessions/<token>.json` | buckets: env/downloads/installed/approvals/decisions/howto |
+| History | `$XDG_DATA_HOME/mallm/history.jsonl` | append-only, pre-redacted |
+| Corpus cache | `$XDG_CACHE_HOME/mallm/corpus/<key>/` | payload + `meta.json` |
+| Knowledge | `~/.config/mallm/knowledge.yaml` | topics with confidence |
+| Run scripts | `$XDG_CACHE_HOME/mallm/howto/<token>/run-N.sh` | generated, mode 0755 |
+
+No database. No credentials are read except the env var **names** named in config (`apiKeyEnv`,
+`tokenEnv`) — values are never stored by mallm.
+
+## Security-Relevant Design
+
+Outbound and execution surfaces are gated and redacted by construction: inference/Jev keys travel
+only in an `Authorization` header and error strings carry env **names**; write-back pushes
+authenticate through an env-injected git credential helper (token never in argv or URLs) with
+`GH_TOKEN` for `gh`; how-to script execution requires an explicit per-attempt approval and its
+output is redacted before persistence. The remaining shells (`resolver.ts` native/help tiers,
+`init.ts`) still interpolate the `app` argument into `execSync` template strings — see
+[THREAT-MODEL.md](THREAT-MODEL.md).
 
 ## Ecosystem Fit
 
-`mallm` is a portfolio submodule of the Noizu Infra monorepo (`Portfolio/Utilities/source/mallm`, remote `the-robot-lives/mallm`, tracked branch `develop`) but is deliberately decoupled from the shell-utility conventions used by its sibling `utilities/` packages:
-
-- **Not a `k8-lib` consumer** — sibling utilities are shell scripts sourcing `share/k8-lib/`; mallm is a standalone Node.js package with no shared-lib dependency.
-- **Install path differs** — `make install-utilities` symlinks shell tools into `~/.local/bin`; mallm's `Makefile` provides monorepo hook stubs only (`compile`/`test` are no-ops, `install` prints an npm pointer). Actual install is `npm install && npm run build && npm link`.
-- **No `.infra-config.yaml` coupling** — mallm reads nothing from the repo's build/deploy metadata; instead it *documents* those tools. The bundled `examples/` (`helm-upgrade`, `docker-build`) target monorepo utilities, and a repo-root `.mallm/` directory is the intended home for project-local definitions of them.
-- **Purpose in the ecosystem** — gives LLM agents (Claude Code sessions, delegated scouts) structured when-to-use/gotcha context for the repo's DevOps CLIs, beyond what `--help` conveys.
+`mallm` is a portfolio submodule of the Noizu Infra monorepo
+(`Portfolio/Utilities/source/mallm`, remote `the-robot-lives/mallm`, branch `develop`) but is
+deliberately decoupled from the shell-utility conventions of its siblings: it is a standalone Node
+package with no `k8-lib` dependency, no `.infra-config.yaml` coupling, and an npm-link install (the
+`Makefile` is monorepo hook stubs only). It documents those sibling DevOps CLIs for LLM agents.
 
 ## Key Decisions
 
-- **YAML over JSON for authoring** — humans write `mallm.yaml`; JSON is output-only (`--json`). YAML's multiline strings suit the prose-heavy `context` section.
-- **Resolution chain over registry** — no central database; discovery is file-system and exec-based, so definitions travel with projects.
-- **Help fallback as degraded mode** — any tool with `--help` gets basic mallm coverage without authoring effort; regex-based extraction handles common flag/subcommand patterns.
-- **No caching** — resolution is fast (stat calls + one optional exec); adding a cache would complicate invalidation for negligible benefit.
-- **Lightweight `validate`** — `mallm validate` checks required fields (`mallm`, `name`, `summary`, argument shape) in code; it does not yet run the full JSON Schema in `schemas/mallm.schema.json`, which serves as the canonical spec for authors and external validators.
+- **YAML authoring, JSON output** — humans write `mallm.yaml`; JSON is output-only.
+- **Filesystem resolution over a registry** — definitions travel with projects; no central database.
+- **Degrade, never throw** — inference, Jev, corpus and write-back all return typed results; every
+  path (unconfigured, offline, malformed) yields usable output.
+- **No new dependencies for search** — BM25 is hand-rolled rather than pulling an embedding stack.
+- **Approval gates with no bypass** — the how-to pipeline cannot install or run without an explicit,
+  scoped decision; redaction has no escape hatch.
+- **Lightweight `validate`** — structural checks in code; `schemas/mallm.schema.json` remains the
+  canonical contract.
 
 ## Technology Stack
 
@@ -97,3 +158,4 @@ Each result carries a `source` tag (`project-local`, `user-config`, `native`, `h
 | YAML | `yaml` 2.7 |
 | Terminal styling | Chalk 5 |
 | Build | `tsc` (no bundler) |
+| Tests | `node:test` via `tsx` |

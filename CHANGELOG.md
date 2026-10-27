@@ -4,6 +4,9 @@
 - Docs: `PROJ-ARCH.md` gained an "Ecosystem Fit" section (standalone Node package, decoupled from `k8-lib`/`.infra-config.yaml`; npm-link install) and a note that `mallm validate` is a lightweight required-field check while `schemas/mallm.schema.json` remains the canonical spec
 - Docs: `PROJ-LAYOUT.md` and both `.summary.md` quick references updated to reflect the full docs set and Makefile hook stubs
 
+## 2026-10-26
+- Docs: doc-sweep — `PROJ-LAYOUT`, `PROJ-ARCH`, `PROJ-SCHEMA`, `THREAT-MODEL` (+ summaries) brought current with the SemText wave-1/2 modules (config, corpus, env, session, changelog, llm, jev, memory, search, howto): corrects the "stateless / no persistence" claim to the file-backed state model, and extends the threat model with the how-to execution, inference/Jev egress, corpus-source and write-back boundaries (T-007–T-010). Pointer store seeded in #7.
+
 ## [semtext-howto] — 2026-10-21
 Wave 2 of the SemText how-to platform: the resumable how-to state machine, the jev (TypeSafe systemone) client, gated script execution with strict redaction, and corpus write-back.
 
